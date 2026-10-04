@@ -29,7 +29,7 @@ export type Submission = z.infer<typeof SubmissionSchema>;
 export type Level = 1 | 2 | 3;
 
 export interface SfContext {
-  matchedBy: "email" | "account-name" | "none";
+  matchedBy: "email" | "email-domain" | "account-name" | "none";
   contact?: {
     id: string;
     ownerName?: string;

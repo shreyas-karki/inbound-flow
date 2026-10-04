@@ -4,6 +4,7 @@
 // (NoSignals/Blocked/Cool/Warm/Hot; Blocked = a competitor already holds the account).
 // Docs: https://hc.starbridge.ai/api-reference/rest/overview.md
 import { config } from "./config";
+import { coreName } from "./salesforce";
 import type { AccountScore, StarbridgeResult } from "./types";
 
 const BASE = "https://dashboard.starbridge.ai/api/external";
@@ -22,7 +23,7 @@ const STUB: Record<string, AccountScore> = {
   },
 };
 
-interface BuyerBrief { id: string; name: string; type?: string | null; stateCode?: string | null }
+interface BuyerBrief { id: string; name: string; type?: string | null; stateCode?: string | null; url?: string | null }
 type Cell = { value?: any } | undefined;
 
 async function call<T>(method: "GET" | "PUT", path: string, params: Record<string, string> = {}, body?: unknown): Promise<T> {
@@ -43,12 +44,38 @@ async function getScoringBridgeId(): Promise<string | undefined> {
   return scoringBridgeId;
 }
 
-/** Find the district in Starbridge. Prefers school districts; uses the state when we know it. */
-export async function findBuyer(district: string, stateCode?: string): Promise<BuyerBrief | undefined> {
-  const params: Record<string, string> = { buyerName: district, limit: "5" };
+/**
+ * Find the district in Starbridge. The lead's email domain is the best evidence
+ * (portchesterschools.org → Port Chester Public Schools); otherwise take a school district whose
+ * name starts with what they typed. Never fall back to an unrelated buyer: "New York City Public
+ * Schools" once scored the Archdiocese of New York.
+ */
+export async function findBuyer(district: string, stateCode?: string, domain?: string): Promise<BuyerBrief | undefined> {
+  const params: Record<string, string> = { buyerName: district, limit: "10" };
   if (stateCode) params.buyerStateCode = stateCode;
   const { buyers } = await call<{ buyers: BuyerBrief[] }>("GET", "/buyer/quick/search", params);
-  return buyers.find((b) => b.type === "SchoolDistrict") ?? buyers[0];
+  return pickBuyer(district, buyers, domain);
+}
+
+export function pickBuyer(district: string, buyers: BuyerBrief[], domain?: string): BuyerBrief | undefined {
+  const isDistrict = (b: BuyerBrief) => b.type === "SchoolDistrict";
+  if (domain) {
+    const sameDomain = buyers.filter((b) => sameSite(b.url, domain));
+    const pick = sameDomain.find(isDistrict) ?? sameDomain[0];
+    if (pick) return pick;
+  }
+  const target = coreName(district);
+  if (!target) return undefined;
+  // Starts with, not contains: "new york" (city is a generic word) is inside "archdiocese of new york".
+  return buyers.find((b) => isDistrict(b) && `${coreName(b.name)} `.startsWith(`${target} `));
+}
+
+/** "https://www.portchesterschools.org/" vs "portchesterschools.org"; a subdomain of the email domain counts, a parent does not (schools.nyc.gov is not nyc.gov). */
+function sameSite(url: string | null | undefined, domain: string): boolean {
+  if (!url) return false;
+  let host: string;
+  try { host = new URL(url.includes("://") ? url : `https://${url}`).hostname.toLowerCase().replace(/^www\./, ""); } catch { return false; }
+  return host === domain || host.endsWith(`.${domain}`);
 }
 
 /** Turn a Top Buyers row into the fields the router uses. */
@@ -72,11 +99,11 @@ export function parseScoreRow(columns: Record<string, Cell>): AccountScore | und
   };
 }
 
-async function fetchScore(district: string, stateCode?: string): Promise<Omit<StarbridgeResult, "source">> {
+async function fetchScore(district: string, stateCode?: string, domain?: string): Promise<Omit<StarbridgeResult, "source">> {
   if (config.mock.starbridge || !config.starbridge.apiKey) {
     return { account: STUB[district.trim().toLowerCase()] };
   }
-  const [buyer, bridgeId] = await Promise.all([findBuyer(district, stateCode), getScoringBridgeId()]);
+  const [buyer, bridgeId] = await Promise.all([findBuyer(district, stateCode, domain), getScoringBridgeId()]);
   if (!buyer || !bridgeId) return { buyerName: buyer?.name, stateCode: buyer?.stateCode ?? undefined };
   const rows = await call<{ result: { columns: Record<string, Cell> }[] }>(
     "PUT",
@@ -88,11 +115,11 @@ async function fetchScore(district: string, stateCode?: string): Promise<Omit<St
   return { buyerName: buyer.name, stateCode: buyer.stateCode ?? undefined, account: rows.result[0] ? parseScoreRow(rows.result[0].columns) : undefined };
 }
 
-export async function lookupAccountScore(district: string, stateCode?: string): Promise<StarbridgeResult> {
+export async function lookupAccountScore(district: string, stateCode?: string, domain?: string): Promise<StarbridgeResult> {
   const live = !config.mock.starbridge && Boolean(config.starbridge.apiKey);
   try {
     const out = await Promise.race([
-      fetchScore(district, stateCode),
+      fetchScore(district, stateCode, domain),
       new Promise<null>((r) => setTimeout(() => r(null), config.starbridge.timeoutMs)),
     ]);
     if (out === null) return { source: "timeout" };

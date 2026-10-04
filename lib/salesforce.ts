@@ -83,6 +83,9 @@ export function coreName(name: string): string {
     .trim();
 }
 
+const DISTRICT_PREFIX = "[School District]";
+const ACCOUNT_FIELDS = "Id, Name, Label__c, OwnerId, Owner.Name, ParentId, Parent.Name";
+
 /** Pick one account only when the match is unambiguous. Districts (no parent) win over schools. */
 export function pickAccount<T extends { Name: string; ParentId?: string | null }>(typed: string, accounts: T[]): T | undefined {
   if (accounts.length === 1) return accounts[0];
@@ -90,7 +93,49 @@ export function pickAccount<T extends { Name: string; ParentId?: string | null }
   const same = accounts.filter((a) => coreName(a.Name) === target);
   if (same.length === 1) return same[0];
   const districts = same.filter((a) => !a.ParentId);
-  return districts.length === 1 ? districts[0] : undefined;
+  if (districts.length === 1) return districts[0];
+  // "Port Chester" → "[School District] Port Chester-Rye Union Free School District (Port Chester, NY)".
+  if (!target) return undefined;
+  const containing = accounts.filter((a) => a.Name.startsWith(DISTRICT_PREFIX) && ` ${coreName(a.Name)} `.includes(` ${target} `));
+  return containing.length === 1 ? containing[0] : undefined;
+}
+
+// Personal and internal domains say nothing about the district.
+const NON_DISTRICT_DOMAINS = new Set([
+  "gmail.com", "googlemail.com", "yahoo.com", "hotmail.com", "outlook.com", "live.com", "msn.com", "aol.com",
+  "icloud.com", "me.com", "mac.com", "comcast.net", "att.net", "verizon.net", "protonmail.com", "proton.me", "innovamat.com",
+]);
+
+/** "jane@portchesterschools.org" → "portchesterschools.org"; undefined for gmail and the like. */
+export function emailDomain(email: string): string | undefined {
+  const domain = email.split("@")[1]?.trim().toLowerCase();
+  return domain && !NON_DISTRICT_DOMAINS.has(domain) ? domain : undefined;
+}
+
+interface ColleagueRow {
+  AccountId: string;
+  Account?: { Name?: string; ParentId?: string | null; Parent?: { Name?: string; ParentId?: string | null; Parent?: { Name?: string } | null } | null };
+}
+
+/**
+ * The district a colleague's account belongs to: climb through "[School District]" ancestors only,
+ * so a NYC school lands on NYCPS (school → Geographic District → NYCPS) but a Texas district
+ * never climbs into its Education Service Center.
+ */
+export function districtOf(c: ColleagueRow): string {
+  const a = c.Account;
+  const isDistrict = (name?: string) => Boolean(name?.startsWith(DISTRICT_PREFIX));
+  if (a?.Parent?.ParentId && isDistrict(a.Parent.Parent?.Name)) return a.Parent.ParentId;
+  if (a?.ParentId && isDistrict(a.Parent?.Name)) return a.ParentId;
+  return c.AccountId;
+}
+
+/** The district most colleagues on the same email domain belong to, when they mostly agree. */
+export function consensusDistrict(colleagues: ColleagueRow[]): string | undefined {
+  const counts = new Map<string, number>();
+  for (const c of colleagues) if (c.AccountId) counts.set(districtOf(c), (counts.get(districtOf(c)) ?? 0) + 1);
+  const [top] = [...counts].sort((a, b) => b[1] - a[1]);
+  return top && top[1] * 2 > colleagues.length ? top[0] : undefined;
 }
 
 function xmlEscape(value: string): string {
@@ -146,9 +191,33 @@ class LiveSalesforce implements SalesforceClient {
     return out.records;
   }
 
+  /** Account via colleagues on the same email domain, or a district whose Website is that domain. */
+  private async accountByDomain(domain: string): Promise<any | undefined> {
+    const like = soqlLike(domain);
+    const [colleagues, sites] = await Promise.all([
+      this.query<ColleagueRow>(
+        `SELECT AccountId, Account.Name, Account.ParentId, Account.Parent.Name, Account.Parent.ParentId, Account.Parent.Parent.Name
+         FROM Contact WHERE Email LIKE '%@${like}' AND Account.Country__c = '${US}' AND Account.Label__c != 'TEST'
+         ORDER BY LastModifiedDate DESC LIMIT 200`,
+      ),
+      this.query<{ Id: string }>(
+        `SELECT Id FROM Account WHERE Website LIKE '%${like}%' AND Name LIKE '${soqlLike(DISTRICT_PREFIX)}%'
+           AND Country__c = '${US}' AND Label__c != 'TEST' LIMIT 2`,
+      ),
+    ]);
+    const id = consensusDistrict(colleagues) ?? (sites.length === 1 ? sites[0].Id : undefined);
+    if (!id) return undefined;
+    const [account] = await this.query<any>(`SELECT ${ACCOUNT_FIELDS} FROM Account WHERE Id = '${soqlString(id)}'`);
+    return account;
+  }
+
   async lookup(sub: Submission): Promise<SfContext> {
     const { instanceUrl } = await this.auth();
     const ctx: SfContext = { matchedBy: "none" };
+
+    // Runs alongside the email lookup; a failure here just falls through to the name match.
+    const domain = emailDomain(sub.email);
+    const byDomain = domain ? this.accountByDomain(domain).catch(() => undefined) : Promise.resolve(undefined);
 
     const contacts = await this.query<any>(
       `SELECT Id, Owner.Name, US_Inbound_Stage__c, Inbound_Contact_Message__c, Contact_Source__c,
@@ -172,8 +241,20 @@ class LiveSalesforce implements SalesforceClient {
       }
     }
 
+    // "Port Chester" or a school name won't always match an account, but colleagues on the same domain will.
     if (!ctx.account) {
-      const select = `SELECT Id, Name, Label__c, OwnerId, Owner.Name, ParentId, Parent.Name FROM Account`;
+      const acct = await byDomain;
+      if (acct) {
+        if (ctx.matchedBy === "none") ctx.matchedBy = "email-domain";
+        ctx.account = {
+          id: acct.Id, name: acct.Name, label: acct.Label__c, ownerId: acct.OwnerId,
+          ownerName: acct.Owner?.Name, parentId: acct.ParentId, parentName: acct.Parent?.Name,
+        };
+      }
+    }
+
+    if (!ctx.account) {
+      const select = `SELECT ${ACCOUNT_FIELDS} FROM Account`;
       const scope = `Country__c = '${US}' AND Label__c != 'TEST'`;
       let accounts = await this.query<any>(
         `${select} WHERE Name LIKE '%${soqlLike(sub.school)}%' AND ${scope} ORDER BY ParentId NULLS FIRST, Name LIMIT 10`,

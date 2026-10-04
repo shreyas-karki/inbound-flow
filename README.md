@@ -29,7 +29,7 @@ In `MOCK_MODE=true` everything is fake and offline: sample accounts, sample Star
 ## Going live, step by step
 
 1. **Starbridge**: `STARBRIDGE_API_KEY` is already set in `.env` and tested. The router reads your "Account scoring" (Top Buyers) bridge: Account Score 0-100, Fit band, Signal band, competitors present, enrollment, math proficiency. Lookups take under a second.
-1. **Claude**: set `ANTHROPIC_API_KEY`. Model defaults to `claude-opus-5-5` at low effort for speed (`CLAUDE_MODEL` to change).
+1. **Claude**: set `ANTHROPIC_API_KEY`. Model defaults to `claude-sonnet-5-5` at low effort for speed (`CLAUDE_MODEL` to change).
 2. **Salesforce**: set `SALESFORCE_USERNAME`, `SALESFORCE_PASSWORD` and `SALESFORCE_SECURITY_TOKEN` (Salesforce → Settings → Reset My Security Token), then `MOCK_MODE=false`. `SALESFORCE_LOGIN_URL` defaults to `https://login.salesforce.com`. The router logs in with SOAP `login()` and uses the session for REST calls, so no Connected App is needed. Before going to production, switch to a dedicated integration user rather than a personal login.
    - Keep `SF_WRITE_MODE=dry-run` at first: the router reads real data and logs the exact fields it *would* write (`sf_payload` in the logs). Flip to `live` once a few dry runs look right.
 3. **Slack**: create an incoming webhook for the inbound channel and set `SLACK_WEBHOOK_URL`.

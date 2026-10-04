@@ -29,7 +29,7 @@ export const config = {
   },
 
   anthropic: {
-    model: env("CLAUDE_MODEL", "claude-opus-5-5"),
+    model: env("CLAUDE_MODEL", "claude-sonnet-5-5"),
     timeoutMs: Number(env("SCORING_TIMEOUT_MS", "6000")),
     // Needed for user-level keys (sk-ant-usr-…) that aren't scoped to one workspace.
     workspaceId: env("ANTHROPIC_WORKSPACE_ID"),

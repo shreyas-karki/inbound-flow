@@ -3,7 +3,7 @@
 import { config } from "./config";
 import { addToOutbox } from "./outbox";
 import { applyRules, meetingForLevel } from "./rules";
-import { createSalesforce, type SalesforceClient } from "./salesforce";
+import { createSalesforce, emailDomain, type SalesforceClient } from "./salesforce";
 import { claudeScorer, mockScorer, scoreWithFallback, type Scorer } from "./score";
 import { claudeDrafter, draftWithFallback, mockDrafter, type Drafter } from "./sdr";
 import { buildSlackMessage, postToSlack } from "./slack";
@@ -12,7 +12,7 @@ import { SubmissionSchema, type Decision, type NextStep, type ReplyDraft, type S
 
 export interface Deps {
   salesforce: SalesforceClient;
-  starbridge: (district: string, stateCode?: string) => Promise<StarbridgeResult>;
+  starbridge: (district: string, stateCode?: string, domain?: string) => Promise<StarbridgeResult>;
   scorer: Scorer;
   drafter: Drafter;
   slack: (text: string) => Promise<void>;
@@ -73,7 +73,7 @@ export async function handleSubmission(raw: unknown, deps: Deps = defaultDeps())
   // Salesforce district names end in "(City, ST)"; pass the state so Starbridge picks the right district.
   const district = sf.account?.parentName ?? sf.account?.name;
   const stateCode = district?.match(/,\s*([A-Z]{2})\)\s*$/)?.[1];
-  const sb: StarbridgeResult = await time("starbridge", () => deps.starbridge(sub.school, stateCode));
+  const sb: StarbridgeResult = await time("starbridge", () => deps.starbridge(sub.school, stateCode, emailDomain(sub.email)));
 
   const ruled = applyRules(sub, sf);
   const decision: Decision = ruled ? { ...ruled, meeting: ruled.route === "owner" ? undefined : meetingForLevel(ruled.level) } : await time("scoring", () => scoreWithFallback(deps.scorer, sub, sf, sb));

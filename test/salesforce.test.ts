@@ -49,6 +49,44 @@ describe("account matching", async () => {
     expect(pickAccount("Ajo Unified", accts)?.Name).toContain("Ajo Unified District");
     expect(pickAccount("Springfield", [{ Name: "Springfield A" }, { Name: "Springfield B" }])).toBeUndefined();
   });
+  it("picks the one district whose name contains a short typed name", () => {
+    const accts = [
+      { Name: "[School District] Port Chester-Rye Union Free School District (Port Chester, NY)", ParentId: null },
+      { Name: "Corpus Christi Holy Rosary School (Port Chester, NY)", ParentId: null },
+      { Name: "King Street School (Port Chester, NY)", ParentId: "pc" },
+    ];
+    expect(pickAccount("Port Chester", accts)?.Name).toContain("Port Chester-Rye");
+    expect(pickAccount("New York City Public Schools", [
+      { Name: "[School District] New York City Public Schools (NYCPS)", ParentId: null },
+      { Name: "[School District] New York City Geographic District # 2 (New York, NY)", ParentId: "nyc" },
+    ])?.Name).toContain("NYCPS");
+  });
+});
+
+describe("email domain matching", async () => {
+  const { emailDomain, districtOf, consensusDistrict } = await import("../lib/salesforce");
+  const nycSchool = {
+    AccountId: "ps48", Account: { Name: "Ps 48 William Wordsworth (Jamaica, NY)", ParentId: "gd28",
+      Parent: { Name: "[School District] New York City Geographic District #28 (Jamaica, NY)", ParentId: "nycps", Parent: { Name: "[School District] New York City Public Schools (NYCPS)" } } },
+  };
+  const txDistrict = {
+    AccountId: "plano", Account: { Name: "[School District] Plano ISD (Plano, TX)", ParentId: "esc10",
+      Parent: { Name: "[State Ed. Unit] REG 10 EDUCATION SERVICE CENTER (Richardson, TX)", ParentId: null } },
+  };
+  it("ignores personal and internal domains", () => {
+    expect(emailDomain("Jane@PortChesterSchools.org")).toBe("portchesterschools.org");
+    expect(emailDomain("jane@gmail.com")).toBeUndefined();
+    expect(emailDomain("prynce.karki@innovamat.com")).toBeUndefined();
+  });
+  it("climbs through district accounts but never into an ESC or county office", () => {
+    expect(districtOf(nycSchool)).toBe("nycps");
+    expect(districtOf(txDistrict)).toBe("plano");
+  });
+  it("needs a majority of colleagues to agree", () => {
+    expect(consensusDistrict([nycSchool, nycSchool, txDistrict])).toBe("nycps");
+    expect(consensusDistrict([nycSchool, txDistrict])).toBeUndefined();
+    expect(consensusDistrict([])).toBeUndefined();
+  });
 });
 
 describe("login", async () => {
