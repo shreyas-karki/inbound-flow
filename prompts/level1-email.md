@@ -1,15 +1,11 @@
-Subject: Math Journeys resources for {{district}}
+Subject: Your Thinking Math! request for {{district}}
 
 Hi {{first_name}},
 
-Thanks for your interest in Math Journeys. Here are a few things to help you take a closer look:
+Thanks for reaching out about Thinking Math!, our TK-8 core math curriculum aligned with Building Thinking Classrooms. We've had a lot of sample requests lately, so we'll be in touch about yours as soon as we can.
 
-- A 3-minute overview of how Math Journeys works in Tier 2 and Tier 3 groups
-- Sample lessons with the manipulatives and print materials students use
-- How districts use our coaching to support interventionists
-
-If you'd like to talk through how this could work for your students, just reply to this email and I'll set up a time.
+To speed things up, it really helps to loop in {{loop_in}}. If you reply with their name and email, we'll prioritize your request and reach out to them directly.
 
 Best,
-{{bdr_name}}
+{{rep_name}}
 Innovamat

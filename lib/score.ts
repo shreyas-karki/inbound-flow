@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
+import { claudeClient } from "./claude";
 import { config } from "./config";
-import { routeForLevel } from "./rules";
+import { adoptingSoon, isHotDistrict, isNyc, meetingForLevel, roleGroup, routeForLevel } from "./rules";
 import type { Decision, Level, SfContext, StarbridgeResult, Submission } from "./types";
 
 const ScoreSchema = z.object({
@@ -22,12 +22,16 @@ function rubric(): string {
 
 /** Claude scorer. The router wraps it with a timeout and a Level 2 fallback. */
 export const claudeScorer: Scorer = async (sub, sf, sb) => {
-  const client = new Anthropic();
+  const client = claudeClient();
   const lead = {
     role: sub.job_title,
+    role_group: roleGroup(sub.job_title),
+    hot_district: isHotDistrict(sb),
+    is_nyc: isNyc(sub, sf),
     district_or_school: sub.school,
     country: sub.country,
     grades: sub.form_grades,
+    curriculum_adoption: sub.adoption_timeline || null,
     needs: sub.needs,
     email_domain: sub.email.split("@")[1],
     salesforce: {
@@ -70,15 +74,16 @@ export const claudeScorer: Scorer = async (sub, sf, sb) => {
   return { level: Number(response.parsed_output.tier) as Level, reason: response.parsed_output.reason };
 };
 
-/** Offline scorer for MOCK_MODE: simple points so the whole flow runs without an API key. */
+/** Offline scorer for MOCK_CLAUDE: the rubric's main rules, so the whole flow runs without an API key. */
 export const mockScorer: Scorer = async (sub, _sf, sb) => {
   await new Promise((r) => setTimeout(r, 400));
-  const district = /superintendent|chief|director|coordinator/i.test(sub.job_title) ? 3 : 0;
-  const school = /principal|coach|interventionist|mtss|tosa/i.test(sub.job_title) ? 2 : 0;
-  const hot = sb.account && ["Hot", "Warm"].includes(sb.account.signalBand) ? 2 : sb.account && sb.account.score >= 60 ? 1 : 0;
-  const points = Math.max(district, school) + hot + (/tier ?[23]|intervention|benchmark/i.test(sub.needs) ? 1 : 0);
-  const level: Level = points >= 4 ? 3 : points >= 2 ? 2 : 1;
-  return { level, reason: `Mock score: ${points} points (${sub.job_title}, Starbridge ${sb.account?.score ?? "n/a"}).` };
+  const group = roleGroup(sub.job_title);
+  const why = adoptingSoon(sub) || isHotDistrict(sb);
+  const level: Level =
+    group === "decision_maker" ? (why ? 3 : 2)
+    : group === "champion" ? 2
+    : why ? 2 : 1;
+  return { level, reason: `Mock: ${group.replace("_", " ")}${why ? " with a WHY NOW (adopting soon or hot district)" : ", no WHY NOW yet"}.` };
 };
 
 /** Run a scorer with a hard timeout. Any failure becomes Level 2 so nobody waits on a broken step. */
@@ -88,11 +93,12 @@ export async function scoreWithFallback(scorer: Scorer, sub: Submission, sf: SfC
       scorer(sub, sf, sb),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`scoring timed out after ${timeoutMs}ms`)), timeoutMs)),
     ]);
-    return { ...result, route: routeForLevel(result.level), source: "claude" };
+    return { ...result, route: routeForLevel(result.level), meeting: meetingForLevel(result.level), source: "claude" };
   } catch (err) {
     return {
       level: 2,
       route: "bdr",
+      meeting: "discovery",
       reason: `Fallback to Level 2 (${err instanceof Error ? err.message : "scoring error"}).`,
       source: "fallback",
     };

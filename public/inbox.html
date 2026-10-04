@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lead Inbox</title>
+<style>
+:root{--bg:#f6f6f3;--card:#fff;--ink:#1d1d1b;--mute:#6b6b66;--line:#e4e4de;--l3:#1f8a4c;--l2:#2f6fd6;--l1:#c99a06;--own:#7a5bd1}
+@media (prefers-color-scheme:dark){:root{--bg:#161615;--card:#20201e;--ink:#f1f1ec;--mute:#a3a39c;--line:#33332f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px 64px}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+h1{font-size:22px;margin:0}
+.mute{color:var(--mute);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:12px}
+.top{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.lvl{font-weight:600;font-size:12px;color:#fff;border-radius:999px;padding:2px 10px}
+.lvl[data-l="3"]{background:var(--l3)}.lvl[data-l="2"]{background:var(--l2)}.lvl[data-l="1"]{background:var(--l1)}.lvl[data-l="owner"]{background:var(--own)}
+.who{font-weight:600}
+.reason{margin:6px 0 4px;font-style:italic}
+.facts{font-size:13px;color:var(--mute);margin:2px 0}
+details{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;font-weight:600}
+pre{white-space:pre-wrap;font:14px/1.5 inherit;background:var(--bg);border-radius:8px;padding:12px;margin:10px 0}
+a.btn{display:inline-block;background:var(--ink);color:var(--bg);text-decoration:none;border-radius:8px;padding:8px 14px;font-weight:600;font-size:14px}
+.empty{text-align:center;padding:48px 16px;color:var(--mute)}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Lead inbox</h1>
+    <span class="mute">Prototype: last 50 leads since the server started · refreshes every 5s</span>
+  </header>
+  <div id="list"><p class="empty">No leads yet. Submit the form at <a href="/">/</a>.</p></div>
+</main>
+<template id="tCard">
+  <div class="card">
+    <div class="top"><span class="lvl"></span><span class="who"></span><span class="mute when"></span></div>
+    <p class="reason"></p>
+    <p class="facts sb"></p>
+    <p class="facts sig"></p>
+    <p class="facts sf"></p>
+    <details>
+      <summary></summary>
+      <pre></pre>
+      <a class="btn" target="_blank" rel="noopener">Open as Gmail draft</a>
+    </details>
+  </div>
+</template>
+<script>
+const LABEL = { first_touch: "First Touch · GM", discovery: "Discovery · BDR" };
+const open = new Set();
+async function load() {
+  let rows = [];
+  try { rows = await (await fetch("/api/outbox")).json(); } catch { return; }
+  if (!rows.length) return;
+  const list = document.getElementById("list");
+  document.querySelectorAll("details[open]").forEach((d) => open.add(d.dataset.key));
+  list.replaceChildren(...rows.map((r) => {
+    const c = document.getElementById("tCard").content.cloneNode(true);
+    const q = (s) => c.querySelector(s);
+    const owner = r.decision.route === "owner";
+    q(".lvl").dataset.l = owner ? "owner" : r.decision.level;
+    q(".lvl").textContent = owner ? "Owner" : `L${r.decision.level}${r.decision.meeting ? " · " + LABEL[r.decision.meeting] : " · Email"}`;
+    q(".who").textContent = `${r.lead.name} ${r.lead.surname} · ${r.lead.job_title} · ${r.lead.school}`;
+    q(".when").textContent = new Date(r.at).toLocaleTimeString();
+    q(".reason").textContent = `${r.decision.reason} (${r.decision.source})`;
+    q(".sb").textContent = `Starbridge: ${r.starbridge}${r.lead.adoption_timeline ? " · Adoption: " + r.lead.adoption_timeline : ""}`;
+    if (r.signals) q(".sig").textContent = `Signals: ${r.signals}`; else q(".sig").remove();
+    q(".sf").textContent = `Salesforce: ${r.salesforce} · ${r.lead.email}`;
+    const d = q("details");
+    d.dataset.key = r.at + r.lead.email;
+    if (open.has(d.dataset.key)) d.open = true;
+    if (r.draft) {
+      q("summary").textContent = `AI SDR reply (${r.draft.source})${r.draftError ? " · Claude failed, template used" : ""}`;
+      q("pre").textContent = `To: ${r.draft.to}\nSubject: ${r.draft.subject}\n\n${r.draft.body}`;
+      q("a.btn").href = r.draft.gmailUrl;
+    } else {
+      q("summary").textContent = owner ? "No AI reply: the account owner follows up" : `No draft${r.draftError ? ": " + r.draftError : ""}`;
+      q("pre").remove(); q("a.btn").remove();
+    }
+    return c;
+  }));
+}
+load();
+setInterval(load, 5000);
+</script>
+</body>
+</html>

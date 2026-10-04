@@ -12,17 +12,17 @@ const STUB: Record<string, AccountScore> = {
   "lakeview county schools": {
     score: 82, fitBand: "Strong", signalBand: "Hot",
     fitSummary: "Large district, low math proficiency, no recent core math adoption.",
-    signalSummary: "Board approved intervention budget; RFP expected spring 2027.",
+    signalSummary: "Board approved a K-8 math curriculum review; RFP expected spring 2027.",
     competitors: [], enrollment: 18000, mathProficiencyPct: 31, propensityToSpend: "Active",
   },
   "oak grove school district": {
     score: 55, fitBand: "Moderate", signalBand: "Cool",
-    fitSummary: "Mid-size district with grade 3-5 math gaps.", signalSummary: "Strategic plan mentions math intervention.",
+    fitSummary: "Mid-size district with grade 3-5 math gaps.", signalSummary: "Strategic plan mentions a new math curriculum.",
     competitors: ["HMH"], enrollment: 6000, mathProficiencyPct: 44, propensityToSpend: "Selective",
   },
 };
 
-interface BuyerBrief { id: string; name: string; type?: string | null }
+interface BuyerBrief { id: string; name: string; type?: string | null; stateCode?: string | null }
 type Cell = { value?: any } | undefined;
 
 async function call<T>(method: "GET" | "PUT", path: string, params: Record<string, string> = {}, body?: unknown): Promise<T> {
@@ -73,11 +73,11 @@ export function parseScoreRow(columns: Record<string, Cell>): AccountScore | und
 }
 
 async function fetchScore(district: string, stateCode?: string): Promise<Omit<StarbridgeResult, "source">> {
-  if (config.mockMode || !config.starbridge.apiKey) {
+  if (config.mock.starbridge || !config.starbridge.apiKey) {
     return { account: STUB[district.trim().toLowerCase()] };
   }
   const [buyer, bridgeId] = await Promise.all([findBuyer(district, stateCode), getScoringBridgeId()]);
-  if (!buyer || !bridgeId) return { buyerName: buyer?.name };
+  if (!buyer || !bridgeId) return { buyerName: buyer?.name, stateCode: buyer?.stateCode ?? undefined };
   const rows = await call<{ result: { columns: Record<string, Cell> }[] }>(
     "PUT",
     `/bridge/${bridgeId}/row`,
@@ -85,11 +85,11 @@ async function fetchScore(district: string, stateCode?: string): Promise<Omit<St
     { filters: { terms: [{ field: "buyerId", operation: "Any", value: [buyer.id] }] } },
   );
   // No row = the district is outside the target market, which is different from a low score.
-  return { buyerName: buyer.name, account: rows.result[0] ? parseScoreRow(rows.result[0].columns) : undefined };
+  return { buyerName: buyer.name, stateCode: buyer.stateCode ?? undefined, account: rows.result[0] ? parseScoreRow(rows.result[0].columns) : undefined };
 }
 
 export async function lookupAccountScore(district: string, stateCode?: string): Promise<StarbridgeResult> {
-  const live = !config.mockMode && Boolean(config.starbridge.apiKey);
+  const live = !config.mock.starbridge && Boolean(config.starbridge.apiKey);
   try {
     const out = await Promise.race([
       fetchScore(district, stateCode),

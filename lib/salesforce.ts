@@ -18,7 +18,7 @@ const US = "United States of America";
 /** Fields we write on every inbound, mirroring the existing Make integration. */
 export function buildContactFields(sub: Submission, ctx: SfContext, decision: Decision): Record<string, unknown> {
   const routerNote = `[Router ${new Date().toISOString().slice(0, 10)}] Level ${decision.level} (${decision.source}): ${decision.reason}`;
-  const message = [sub.needs, sub.form_grades && `Grades: ${sub.form_grades}`, routerNote].filter(Boolean).join("\n\n");
+  const message = [sub.needs, sub.adoption_timeline && `Curriculum adoption: ${sub.adoption_timeline}`, sub.form_grades && `Grades: ${sub.form_grades}`, routerNote].filter(Boolean).join("\n\n");
 
   const fields: Record<string, unknown> = {
     Title: sub.job_title,
@@ -93,21 +93,41 @@ export function pickAccount<T extends { Name: string; ParentId?: string | null }
   return districts.length === 1 ? districts[0] : undefined;
 }
 
+function xmlEscape(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
+
+export function loginEnvelope(username: string, passwordWithToken: string): string {
+  return `<?xml version="1.0" encoding="utf-8"?>
+<env:Envelope xmlns:env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:partner.soap.sforce.com">
+  <env:Body><urn:login><urn:username>${xmlEscape(username)}</urn:username><urn:password>${xmlEscape(passwordWithToken)}</urn:password></urn:login></env:Body>
+</env:Envelope>`;
+}
+
+export function xmlTag(xml: string, tag: string): string | undefined {
+  return xml.match(new RegExp(`<(?:\\w+:)?${tag}>([^<]*)</(?:\\w+:)?${tag}>`))?.[1];
+}
+
 class LiveSalesforce implements SalesforceClient {
   private token?: { accessToken: string; instanceUrl: string; expires: number };
 
+  // SOAP login() with username + password + security token. The session ID it returns works
+  // as a Bearer token for the REST API, so no Connected App is needed.
   private async auth() {
     if (this.token && this.token.expires > Date.now()) return this.token;
-    const { loginUrl, clientId, clientSecret } = config.salesforce;
-    if (!loginUrl || !clientId || !clientSecret) throw new Error("Salesforce env vars missing (SF_LOGIN_URL, SF_CLIENT_ID, SF_CLIENT_SECRET)");
-    const res = await fetch(`${loginUrl.replace(/\/$/, "")}/services/oauth2/token`, {
+    const { loginUrl, username, password, securityToken, apiVersion } = config.salesforce;
+    if (!username || !password) throw new Error("Salesforce env vars missing (SALESFORCE_USERNAME, SALESFORCE_PASSWORD, SALESFORCE_SECURITY_TOKEN)");
+    const res = await fetch(`${loginUrl.replace(/\/$/, "")}/services/Soap/u/${apiVersion.replace(/^v/, "")}`, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret }),
+      headers: { "Content-Type": "text/xml; charset=UTF-8", SOAPAction: "login" },
+      body: loginEnvelope(username, password + securityToken),
     });
-    if (!res.ok) throw new Error(`Salesforce auth failed: ${res.status} ${await res.text()}`);
-    const json = (await res.json()) as { access_token: string; instance_url: string };
-    this.token = { accessToken: json.access_token, instanceUrl: json.instance_url, expires: Date.now() + 50 * 60_000 };
+    const xml = await res.text();
+    if (!res.ok) throw new Error(`Salesforce auth failed: ${res.status} ${xmlTag(xml, "faultstring") ?? xml}`);
+    const sessionId = xmlTag(xml, "sessionId");
+    const serverUrl = xmlTag(xml, "serverUrl");
+    if (!sessionId || !serverUrl) throw new Error("Salesforce auth failed: no session in login response");
+    this.token = { accessToken: sessionId, instanceUrl: new URL(serverUrl).origin, expires: Date.now() + 50 * 60_000 };
     return this.token;
   }
 
@@ -263,5 +283,5 @@ class MockSalesforce implements SalesforceClient {
 }
 
 export function createSalesforce(): SalesforceClient {
-  return config.mockMode ? new MockSalesforce() : new LiveSalesforce();
+  return config.mock.salesforce ? new MockSalesforce() : new LiveSalesforce();
 }

@@ -50,3 +50,15 @@ describe("account matching", async () => {
     expect(pickAccount("Springfield", [{ Name: "Springfield A" }, { Name: "Springfield B" }])).toBeUndefined();
   });
 });
+
+describe("login", async () => {
+  const { loginEnvelope, xmlTag } = await import("../lib/salesforce");
+  it("escapes credentials in the SOAP envelope", () => {
+    const xml = loginEnvelope("a@b.com", "p<&>'\"token");
+    expect(xml).toContain("<urn:password>p&lt;&amp;&gt;&apos;&quot;token</urn:password>");
+  });
+  it("reads tags with or without a namespace prefix", () => {
+    expect(xmlTag("<result><sessionId>00D!abc</sessionId></result>", "sessionId")).toBe("00D!abc");
+    expect(xmlTag("<soapenv:faultstring>INVALID_LOGIN</soapenv:faultstring>", "faultstring")).toBe("INVALID_LOGIN");
+  });
+});
