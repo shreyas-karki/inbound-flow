@@ -8,9 +8,9 @@ try { process.loadEnvFile(".env"); } catch { /* no .env: MOCK_MODE defaults to t
 const PORT = Number(process.env.PORT ?? 3000);
 
 async function main() {
-  const { handleSubmission } = await import("./lib/router"); // after env is loaded
-  const { config } = await import("./lib/config");
-  const { listOutbox } = await import("./lib/outbox");
+  const { handleSubmission } = await import("./lib/router.js"); // after env is loaded
+  const { config } = await import("./lib/config.js");
+  const { listOutbox } = await import("./lib/outbox.js");
 
   http.createServer(async (req, res) => {
     if (req.method === "POST" && req.url?.split("?")[0] === "/api/submit") {

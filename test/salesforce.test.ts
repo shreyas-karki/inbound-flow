@@ -36,7 +36,7 @@ describe("buildContactFields", () => {
 });
 
 describe("account matching", async () => {
-  const { coreName, pickAccount } = await import("../lib/salesforce");
+  const { coreName, pickAccount } = await import("../lib/salesforce.js");
   it("normalizes Salesforce district names and typed names to the same core", () => {
     expect(coreName("[School District] Ajo Unified District (Ajo, AZ)")).toBe("ajo");
     expect(coreName("Ajo Unified School District")).toBe("ajo");
@@ -64,7 +64,7 @@ describe("account matching", async () => {
 });
 
 describe("email domain matching", async () => {
-  const { emailDomain, districtOf, consensusDistrict } = await import("../lib/salesforce");
+  const { emailDomain, districtOf, consensusDistrict } = await import("../lib/salesforce.js");
   const nycSchool = {
     AccountId: "ps48", Account: { Name: "Ps 48 William Wordsworth (Jamaica, NY)", ParentId: "gd28",
       Parent: { Name: "[School District] New York City Geographic District #28 (Jamaica, NY)", ParentId: "nycps", Parent: { Name: "[School District] New York City Public Schools (NYCPS)" } } },
@@ -90,7 +90,7 @@ describe("email domain matching", async () => {
 });
 
 describe("login", async () => {
-  const { loginEnvelope, xmlTag } = await import("../lib/salesforce");
+  const { loginEnvelope, xmlTag } = await import("../lib/salesforce.js");
   it("escapes credentials in the SOAP envelope", () => {
     const xml = loginEnvelope("a@b.com", "p<&>'\"token");
     expect(xml).toContain("<urn:password>p&lt;&amp;&gt;&apos;&quot;token</urn:password>");
