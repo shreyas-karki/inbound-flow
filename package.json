@@ -1,0 +1,22 @@
+{
+  "name": "inbound-flow",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Math Journeys inbound lead router: Salesforce match, Starbridge signals, Claude scoring, routing.",
+  "scripts": {
+    "dev": "tsx dev-server.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "@vercel/node": "^20.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  }
+}

@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Math Journeys | Innovamat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Gochi+Hand&display=swap">
+<style>
+:root{
+  --bg:#EEF5EC; --surface:#FFFFFF; --ink:#1C2724; --muted:#5A6762; --line:#D5DED7;
+  --accent:#2F8F46; --teal:#1E7C8C; --btn:#1F2A27; --btn-ink:#FFFFFF; --soft:#F4F8F3; --err:#C2412D;
+  --display:"Gochi Hand", "Comic Sans MS", cursive;
+  --body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+header{background:var(--surface);border-bottom:1px solid var(--line)}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:clamp(16px,4vw,40px)}
+header .wrap{display:flex;align-items:center;gap:10px;padding-block:18px;font-weight:500}
+header svg{width:20px;height:20px}
+main .wrap{display:grid;grid-template-columns:1.15fr 1fr;gap:clamp(24px,4vw,56px);padding-block:clamp(32px,6vw,72px);align-items:start}
+@media (max-width:880px){main .wrap{grid-template-columns:1fr}}
+.hero{min-width:0;display:flex;flex-direction:column;gap:18px}
+.wordmark{font-family:var(--display);font-size:clamp(40px,5vw,56px);line-height:1;background:linear-gradient(90deg,var(--accent),var(--teal));-webkit-background-clip:text;background-clip:text;color:transparent;width:max-content;max-width:100%}
+h1{font-size:clamp(30px,4vw,48px);line-height:1.1;margin:0;font-weight:800;letter-spacing:-.02em;text-wrap:balance}
+h1 u{text-decoration:underline dotted var(--accent);text-decoration-thickness:3px;text-underline-offset:10px}
+.lede{color:var(--muted);font-size:17px;max-width:56ch;margin:0}
+.card{background:var(--surface);border-radius:18px;padding:clamp(20px,3vw,36px);box-shadow:0 1px 2px rgba(20,40,30,.04),0 12px 32px rgba(20,40,30,.06);min-width:0}
+.card h2{margin:0 0 4px;font-size:24px;font-weight:700}
+.card .sub{margin:0 0 20px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
+@media (max-width:480px){.grid{grid-template-columns:1fr}}
+.f{display:flex;flex-direction:column;gap:6px;min-width:0}
+.f.full{grid-column:1/-1}
+label{font-weight:600;font-size:14px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:11px 12px;width:100%}
+textarea{min-height:76px;resize:vertical}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+.hp{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
+.check{display:flex;align-items:center;gap:8px;margin:18px 0 14px;font-size:14px;color:var(--muted)}
+.check input{width:auto}
+.check a{color:var(--accent)}
+.btn{font:inherit;font-weight:700;font-size:16px;width:100%;padding:14px;border:0;border-radius:8px;background:var(--btn);color:var(--btn-ink);cursor:pointer}
+.btn:disabled{opacity:.5;cursor:wait}
+.fine{text-align:center;color:var(--muted);font-size:13px;margin:12px 0 0}
+.err{color:var(--err);font-size:14px;margin:10px 0 0}
+.steps{list-style:none;margin:0;padding:0}
+.step{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);color:var(--muted)}
+.step:last-child{border-bottom:0}
+.dot{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:12px;font-weight:700}
+.step[data-s="run"]{color:var(--ink)}
+.step[data-s="run"] .dot{border-color:var(--teal);border-top-color:transparent;animation:spin .8s linear infinite}
+.step[data-s="done"]{color:var(--ink)}
+.step[data-s="done"] .dot{background:var(--accent);border-color:var(--accent);color:#fff}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.step[data-s="run"] .dot{animation:none}}
+.notice{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:16px}
+.cal{width:100%;height:640px;border:0;border-radius:12px;background:var(--soft)}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><rect x="2" y="3" width="16" height="3" rx="1.2"/><path d="M4 8.5h12l-6 3 6 3H4l6-3z"/><rect x="2" y="15" width="16" height="2.4" rx="1.2"/></svg>
+  Innovamat
+</div></header>
+
+<main><div class="wrap">
+  <section class="hero">
+    <div class="wordmark">MATH JOURNEYS</div>
+    <h1>Math Intervention That <u>Closes</u> Learning Gaps</h1>
+    <p class="lede">Research-based, high-quality math intervention program that helps teachers develop student thinking through manipulatives, print, digital practice, and expert coaching.</p>
+  </section>
+
+  <section class="card" aria-live="polite">
+    <div id="vForm">
+      <h2>See the Program for Yourself</h2>
+      <p class="sub">Discover if Math Journeys fits your Tier 2/3 plan.</p>
+      <form id="form" novalidate>
+        <div class="grid">
+          <div class="f"><label for="name">First Name *</label><input id="name" name="name" required autocomplete="given-name"></div>
+          <div class="f"><label for="surname">Last Name *</label><input id="surname" name="surname" required autocomplete="family-name"></div>
+          <div class="f"><label for="email">Email *</label><input id="email" name="email" type="email" required autocomplete="email"></div>
+          <div class="f"><label for="phone_number">Phone Number</label><input id="phone_number" name="phone_number" type="tel" placeholder="(555) 555-5555" autocomplete="tel"></div>
+          <div class="f"><label for="job_title">Role *</label>
+            <!-- Option values are Salesforce Role__c picklist values. -->
+            <select id="job_title" name="job_title" required>
+              <option value="">Select</option>
+              <option>Teacher</option>
+              <option>Interventionist</option>
+              <option>MTSS Coordinator</option>
+              <option>Instructional Coach</option>
+              <option>Math Coach</option>
+              <option>Principal</option>
+              <option>Vice Principal</option>
+              <option>Math / STEM Coordinator</option>
+              <option>Curriculum Coordinator</option>
+              <option>Math Director</option>
+              <option>Curriculum Director</option>
+              <option>Director of Teaching &amp; Learning</option>
+              <option>Director of Special Education</option>
+              <option>Title I Director</option>
+              <option>Chief Academic Officer</option>
+              <option>Assistant Superintendent</option>
+              <option>Superintendent</option>
+              <option>Parent or Homeschooler</option>
+              <option>Other</option>
+            </select></div>
+          <div class="f"><label for="school">School District *</label><input id="school" name="school" required placeholder="Find Your School District"></div>
+          <div class="f"><label for="country">Country</label>
+            <select id="country" name="country"><option>United States of America</option><option>Canada</option><option>Other</option></select></div>
+          <div class="f"><label for="form_grades">Grades</label>
+            <select id="form_grades" name="form_grades"><option value="">Select</option><option>K-2</option><option>3-5</option><option>6-8</option><option>K-8</option></select></div>
+          <div class="f full"><label for="needs">Tell Us About Your Math Intervention Needs</label><textarea id="needs" name="needs"></textarea></div>
+        </div>
+        <div class="hp" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div>
+        <label class="check"><input type="checkbox" id="pp"> I accept Innovamat's&nbsp;<a href="https://www.innovamat.com/en-us/privacy-policy" target="_blank" rel="noopener">privacy policy</a></label>
+        <button class="btn" id="submit">Submit</button>
+        <p class="err" id="err" hidden></p>
+        <p class="fine">No commitment. Just a conversation about your students.</p>
+      </form>
+    </div>
+
+    <div id="vWait" hidden>
+      <h2>Finding the right person for you…</h2>
+      <p class="sub">This takes a few seconds.</p>
+      <ol class="steps">
+        <li class="step" data-s="wait"><span class="dot">1</span>Checking our records</li>
+        <li class="step" data-s="wait"><span class="dot">2</span>Looking up your district</li>
+        <li class="step" data-s="wait"><span class="dot">3</span>Matching you with the right specialist</li>
+      </ol>
+    </div>
+
+    <div id="vDone" hidden></div>
+  </section>
+</div></main>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const startedAt = Date.now();
+const params = new URLSearchParams(location.search);
+const UTM = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
+
+$("#form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = $("#err");
+  const data = Object.fromEntries(new FormData(e.target).entries());
+  const missing = ["name", "surname", "email", "job_title", "school"].filter((k) => !String(data[k] || "").trim());
+  if (missing.length) return show(err, "Fill in the required fields marked with *.");
+  if (!/^\S+@\S+\.\S+$/.test(data.email)) return show(err, "Enter a valid email address.");
+  if (!$("#pp").checked) return show(err, "Accept the privacy policy to continue.");
+  err.hidden = true;
+
+  for (const k of UTM) data[k] = params.get(k) || "";
+  data.page_url = location.origin + location.pathname;
+  data.form_started_at = startedAt;
+
+  $("#vForm").hidden = true;
+  $("#vWait").hidden = false;
+  const steps = [...document.querySelectorAll(".step")];
+  const tick = (i) => steps.forEach((s, j) => {
+    s.dataset.s = j < i ? "done" : j === i ? "run" : "wait";
+    s.querySelector(".dot").textContent = j < i ? "✓" : j + 1;
+  });
+  tick(0);
+  const t1 = setTimeout(() => tick(1), 1200);
+  const t2 = setTimeout(() => tick(2), 2400);
+
+  try {
+    const res = await fetch("/api/submit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+    const out = await res.json();
+    if (!res.ok || !out.ok) throw new Error(out.error || "Something went wrong.");
+    clearTimeout(t1); clearTimeout(t2); tick(3);
+    setTimeout(() => render(out.next, data.name), 400);
+  } catch (ex) {
+    clearTimeout(t1); clearTimeout(t2);
+    $("#vWait").hidden = true; $("#vForm").hidden = false;
+    show(err, ex.message + " Please try again.");
+  }
+});
+
+function render(next, firstName) {
+  const done = $("#vDone");
+  $("#vWait").hidden = true;
+  done.hidden = false;
+  done.replaceChildren();
+  const h = document.createElement("h2");
+  const p = document.createElement("p");
+  p.className = "sub";
+  p.textContent = next.message;
+  done.append(h, p);
+  if (next.type === "calendar" && next.url) {
+    h.textContent = `Book a time with ${next.host}`;
+    const frame = document.createElement("iframe");
+    frame.className = "cal";
+    frame.src = next.url;
+    frame.title = `Booking calendar for ${next.host}`;
+    done.append(frame);
+  } else {
+    h.textContent = `Thanks, ${firstName}!`;
+  }
+}
+
+function show(el, text) { el.textContent = text; el.hidden = false; }
+</script>
+</body>
+</html>
