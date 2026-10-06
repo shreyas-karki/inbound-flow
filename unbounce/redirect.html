@@ -1,0 +1,45 @@
+<!--
+  Paste into the Unbounce page: Javascripts → Add New → placement "Before Body End Tag".
+  After Unbounce saves the lead (webhooks to Make still fire), this sends the lead to the router,
+  which shows the right calendar for their level. If anything is missing, the normal pop-up shows.
+-->
+<script>
+(function () {
+  var ROUTER_URL = "https://inbound-flow.vercel.app/";
+  // Unbounce field IDs. Phone stays out of the URL on purpose: routing doesn't need it.
+  var FIELDS = [
+    "first_name", "last_name", "email", "school", "country", "user_profile",
+    "when_is_your_district_planning_to_adopt_a_new_math_curriculum",
+    "utm_source", "utm_medium", "utm_campaign", "utm_content"
+  ];
+  var captured = null;
+
+  // Unbounce clears the form after submitting, so read the answers before that happens.
+  function capture() {
+    var q = new URLSearchParams();
+    FIELDS.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el && el.value) q.set(id, el.value);
+    });
+    // #school can hold the search result's ID; the visible search box has the district name.
+    var search = document.getElementById("schoolSearch");
+    if (search && search.value) q.set("school", search.value);
+    if (q.get("email")) captured = q;
+    return true; // never block Unbounce's own submit
+  }
+
+  var hooks = window.ub && window.ub.hooks;
+  if (!hooks || !hooks.afterFormSubmit) return; // hooks missing: page behaves exactly as before
+
+  if (hooks.beforeFormSubmit) hooks.beforeFormSubmit.push(capture);
+  // Backup capture in case beforeFormSubmit isn't available: the moment the submit button is clicked.
+  document.addEventListener("click", function (e) {
+    if (e.target.closest && e.target.closest(".lp-pom-form button, .lp-pom-form [type=submit]")) capture();
+  }, true);
+
+  hooks.afterFormSubmit.push(function () {
+    if (!captured) capture();
+    if (captured) window.location.href = ROUTER_URL + "?" + captured.toString();
+  });
+})();
+</script>
