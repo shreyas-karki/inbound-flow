@@ -4,7 +4,7 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import { claudeClient } from "./claude";
 import { config } from "./config";
-import { adoptingSoon, isHotDistrict, isNyc, meetingForLevel, roleGroup, routeForLevel } from "./rules";
+import { adoptingSoon, isHotDistrict, isInternalTest, isNyc, meetingForLevel, roleGroup, routeForLevel } from "./rules";
 import type { Decision, Level, SfContext, StarbridgeResult, Submission } from "./types";
 
 const ScoreSchema = z.object({
@@ -33,7 +33,8 @@ export const claudeScorer: Scorer = async (sub, sf, sb) => {
     grades: sub.form_grades,
     curriculum_adoption: sub.adoption_timeline || null,
     needs: sub.needs,
-    email_domain: sub.email.split("@")[1],
+    // Hidden for internal tests, so an @innovamat.com address doesn't read as a test submission (Level 0).
+    email_domain: isInternalTest(sub.email) ? null : sub.email.split("@")[1],
     salesforce: {
       known_contact: Boolean(sf.contact),
       account_found: sf.account?.name ?? null,

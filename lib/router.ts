@@ -2,7 +2,7 @@
 // → in the background: Salesforce write, AI SDR reply draft, Slack, prototype inbox.
 import { config } from "./config";
 import { addToOutbox } from "./outbox";
-import { applyRules, meetingForLevel } from "./rules";
+import { applyRules, isInternalTest, meetingForLevel } from "./rules";
 import { createSalesforce, emailDomain, type SalesforceClient } from "./salesforce";
 import { claudeScorer, mockScorer, scoreWithFallback, type Scorer } from "./score";
 import { claudeDrafter, draftWithFallback, mockDrafter, type Drafter } from "./sdr";
@@ -86,11 +86,14 @@ export async function handleSubmission(raw: unknown, deps: Deps = defaultDeps())
     let draftError: string | undefined;
 
     // Existing customers and open deals belong to their owner, and Level 0 gets the automatic email: no AI reply.
+    const internal = isInternalTest(sub.email);
     const [writeOut, draftOut] = await Promise.all([
-      time("salesforce_write", () => deps.salesforce.upsertContact(sub, sf, decision)).catch((err) => {
-        errors.push(`salesforce_write: ${msg(err)}`);
-        return { action: "skipped", note: `Write failed: ${msg(err)}` } as WriteResult;
-      }),
+      internal
+        ? Promise.resolve<WriteResult>({ action: "skipped", note: "Internal test (@innovamat.com)" })
+        : time("salesforce_write", () => deps.salesforce.upsertContact(sub, sf, decision)).catch((err) => {
+            errors.push(`salesforce_write: ${msg(err)}`);
+            return { action: "skipped", note: `Write failed: ${msg(err)}` } as WriteResult;
+          }),
       decision.route === "owner" || decision.level === 0 ? Promise.resolve({}) : time("draft", () => draftWithFallback(deps.drafter, sub, sf, sb, decision, next)),
     ]);
     write = writeOut;

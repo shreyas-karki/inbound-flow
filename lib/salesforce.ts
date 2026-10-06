@@ -5,7 +5,7 @@
 // - Salesforce blocks a second Contact with the same email, so we update instead.
 // - Always exclude test data: Account.Label__c != 'TEST'.
 import { config } from "./config";
-import { isDecisionMaker } from "./rules";
+import { isDecisionMaker, isInternalTest } from "./rules";
 import type { Decision, SfContext, Submission, WriteResult } from "./types";
 
 export interface SalesforceClient {
@@ -219,7 +219,8 @@ class LiveSalesforce implements SalesforceClient {
     const domain = emailDomain(sub.email);
     const byDomain = domain ? this.accountByDomain(domain).catch(() => undefined) : Promise.resolve(undefined);
 
-    const contacts = await this.query<any>(
+    // An internal tester's own contact record says nothing about the district they're posing as.
+    const contacts = isInternalTest(sub.email) ? [] : await this.query<any>(
       `SELECT Id, Owner.Name, US_Inbound_Stage__c, Inbound_Contact_Message__c, Contact_Source__c,
               AccountId, Account.Name, Account.Label__c, Account.OwnerId, Account.Owner.Name, Account.ParentId, Account.Parent.Name
        FROM Contact WHERE Email = '${soqlString(sub.email)}' AND Account.Label__c != 'TEST'

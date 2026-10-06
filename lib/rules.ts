@@ -35,6 +35,11 @@ export function applyRules(sub: Submission, sf: SfContext): Decision | null {
   return null;
 }
 
+/** Innovamat staff testing the form: scored like a real lead, but flagged and never written to Salesforce. */
+export function isInternalTest(email: string): boolean {
+  return /@innovamat\.com$/i.test(email.trim());
+}
+
 export function isDecisionMaker(role: string): boolean {
   return rulesConfig.decisionMakerRoles.includes(role);
 }

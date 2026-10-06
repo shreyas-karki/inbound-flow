@@ -1,4 +1,5 @@
 import { config } from "./config";
+import { isInternalTest } from "./rules";
 import { describeScore } from "./starbridge";
 import type { Decision, NextStep, ReplyDraft, SfContext, StarbridgeResult, Submission, WriteResult } from "./types";
 
@@ -14,7 +15,7 @@ export function buildSlackMessage(sub: Submission, sf: SfContext, sb: Starbridge
   }[decision.route];
 
   const lines = [
-    `${LEVEL_EMOJI[decision.level]} *Level ${decision.level}* · ${who}`,
+    `${isInternalTest(sub.email) ? ":test_tube: *TEST* · " : ""}${LEVEL_EMOJI[decision.level]} *Level ${decision.level}* · ${who}`,
     `_${decision.reason}_ (${decision.source})`,
     routeLine,
     `Email: ${sub.email}${sub.phone_number ? ` · Phone: ${sub.phone_number}` : ""}`,

@@ -46,6 +46,15 @@ describe("handleSubmission (mock mode)", () => {
     expect(out.body.level).toBe(1);
   });
 
+  it("internal @innovamat.com test is scored like a real lead, flagged in Slack, never written to Salesforce", async () => {
+    const d = deps();
+    const out = await handleSubmission({ ...base, email: "tester@innovamat.com", job_title: "Curriculum Director", school: "Lakeview County Schools", adoption_timeline: "SY27-28" }, d);
+    await out.background;
+    expect(out.body.level).toBe(3);
+    expect(d.posts[0]).toContain("*TEST*");
+    expect(listOutbox()[0].salesforce).toBe("skipped");
+  });
+
   it("parent → Level 0, no Slack post and no AI reply", async () => {
     const d = deps();
     const out = await handleSubmission({ ...base, job_title: "Parent or Homeschooler", school: "Riverside Unified" }, d);
