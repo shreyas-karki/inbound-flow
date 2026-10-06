@@ -16,9 +16,9 @@ describe("applyRules", () => {
     expect(d).toMatchObject({ route: "owner", ownerName: "Ana" });
   });
 
-  it("sends non-served countries and non-buyer roles to Level 1", () => {
-    expect(applyRules(sub({ country: "Other" }), { matchedBy: "none" })?.level).toBe(1);
-    expect(applyRules(sub({ job_title: "Parent or Homeschooler" }), { matchedBy: "none" })?.level).toBe(1);
+  it("sends non-served countries and non-buyer roles to Level 0", () => {
+    expect(applyRules(sub({ country: "Other" }), { matchedBy: "none" })?.level).toBe(0);
+    expect(applyRules(sub({ job_title: "Parent or Homeschooler" }), { matchedBy: "none" })?.level).toBe(0);
   });
 
   it("leaves everyone else to Claude", () => {

@@ -186,6 +186,12 @@ body[data-booking] .card{width:100%}
   <p class="notice">Evaluating a new math curriculum for your school or district? Reply to that email and we'll set up a time to talk.</p>
 </template>
 
+<template id="tLevel0">
+  <div class="mail"><svg viewBox="0 0 24 24" fill="none" stroke="#222F2D" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5 12 13l8.5-6.5"/></svg></div>
+  <h2>Thanks, we got your request!</h2>
+  <p class="sub">We'll send the details to <b data-email></b>.</p>
+</template>
+
 <template id="tPath">
   <div class="path">
   <div class="info">
@@ -292,8 +298,8 @@ function render(out, data) {
     done.innerHTML = `<h2>Thanks, <span data-name></span>!</h2><p class="sub" data-msg></p>`;
     $("[data-name]", done).textContent = data.name;
     $("[data-msg]", done).textContent = next.message;
-  } else if (out.level === 1) {
-    done.append($("#tLevel1").content.cloneNode(true));
+  } else if (out.level === 0 || out.level === 1) {
+    done.append($(out.level === 0 ? "#tLevel0" : "#tLevel1").content.cloneNode(true));
     $("[data-email]", done).textContent = data.email;
   } else {
     // Level 2 (or unsure): the full path, starting with the math coach call.

@@ -2,7 +2,7 @@ import { config } from "./config";
 import { describeScore } from "./starbridge";
 import type { Decision, NextStep, ReplyDraft, SfContext, StarbridgeResult, Submission, WriteResult } from "./types";
 
-const LEVEL_EMOJI = { 1: ":large_yellow_circle:", 2: ":large_blue_circle:", 3: ":large_green_circle:" } as const;
+const LEVEL_EMOJI = { 0: ":white_circle:", 1: ":large_yellow_circle:", 2: ":large_blue_circle:", 3: ":large_green_circle:" } as const;
 
 export function buildSlackMessage(sub: Submission, sf: SfContext, sb: StarbridgeResult, decision: Decision, write: WriteResult, next: NextStep, draft?: ReplyDraft): string {
   const who = `*${sub.name} ${sub.surname}* (${sub.job_title}) · ${sub.school}`;

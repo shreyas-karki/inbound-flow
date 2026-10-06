@@ -61,14 +61,14 @@ export const config = {
 export const rulesConfig = {
   // Account.Label__c values that mean "already a customer": route to the account owner, not a BDR.
   customerLabels: ["CUSTOMER", "NEW CUSTOMER"],
-  // Countries we sell Thinking Math into. Anything else goes to Level 1.
+  // Countries we sell Thinking Math into. Anything else is Level 0.
   servedCountries: ["United States of America", "Canada"],
-  // Roles that are never a sales conversation. Values are Salesforce Role__c picklist values.
-  level1Roles: ["Parent or Homeschooler", "Press", "Politician", "University", "Consultant / Advisor"],
-  // Who is who, from the US deal-stage framework. Only a decision maker gets a First Touch (Level 3, growth
-  // manager). Champions get a Discovery (Level 2, BDR). End users get a Discovery only when the district is
-  // hot or adopting soon; otherwise Level 1 asks them to loop in a principal / AP / district contact.
-  // A meeting with a Math Coordinator or Curriculum Supervisor is a champion meeting, not a First Touch.
+  // Roles that never buy a district curriculum: Level 0. Values are Salesforce Role__c picklist values.
+  level0Roles: ["Parent or Homeschooler", "Press", "Politician", "University", "Consultant / Advisor"],
+  // Who is who, from the US deal-stage framework. Decision makers with a WHY NOW get a First Touch (Level 3,
+  // growth manager); so do champions running an active review. Other champions get a Discovery (Level 2, BDR).
+  // End users get a Discovery only with an evaluation signal or a hot district (their adoption answer alone
+  // doesn't count); otherwise Level 1 asks them to loop in a principal / AP / district contact.
   decisionMakerRoles: [
     "Superintendent",
     "Assistant Superintendent",

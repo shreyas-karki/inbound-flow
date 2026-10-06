@@ -4,6 +4,7 @@ import { mockScorer } from "../lib/score";
 import { createSalesforce } from "../lib/salesforce";
 import { lookupAccountScore } from "../lib/starbridge";
 import { mockDrafter } from "../lib/sdr";
+import { listOutbox } from "../lib/outbox";
 
 const deps = (): Deps & { posts: string[] } => {
   const posts: string[] = [];
@@ -28,9 +29,11 @@ describe("handleSubmission (mock mode)", () => {
     const out = await handleSubmission({ ...base, job_title: "Teacher", school: "Riverside Unified", needs: "ideas for fractions" }, d);
     await out.background;
     expect(out.body.level).toBe(1);
-    expect(d.posts[0]).toContain("Subject: Your Thinking Math! request");
-    expect(d.posts[0]).toContain("curriculum director");
-    expect(d.posts[0]).toContain("mail.google.com");
+    expect(d.posts).toHaveLength(0); // Levels 0 and 1 don't post to Slack
+    const draft = listOutbox()[0].draft;
+    expect(draft?.subject).toContain("Your Thinking Math! request");
+    expect(draft?.body).toContain("curriculum director");
+    expect(draft?.gmailUrl).toContain("mail.google.com");
   });
 
   it("instructional coach at a hot district → Level 2 Discovery", async () => {
@@ -38,9 +41,18 @@ describe("handleSubmission (mock mode)", () => {
     expect(out.body.level).toBe(2);
   });
 
-  it("teacher adopting soon → Level 2", async () => {
+  it("teacher adopting soon stays Level 1: a teacher's adoption answer needs a second signal", async () => {
     const out = await handleSubmission({ ...base, job_title: "Teacher", school: "Riverside Unified", adoption_timeline: "SY26-27" }, deps());
-    expect(out.body.level).toBe(2);
+    expect(out.body.level).toBe(1);
+  });
+
+  it("parent → Level 0, no Slack post and no AI reply", async () => {
+    const d = deps();
+    const out = await handleSubmission({ ...base, job_title: "Parent or Homeschooler", school: "Riverside Unified" }, d);
+    await out.background;
+    expect(out.body.level).toBe(0);
+    expect(d.posts).toHaveLength(0);
+    expect(listOutbox()[0].draft).toBeUndefined();
   });
 
   it("math coordinator at a hot district adopting soon is still a Discovery, never a First Touch", async () => {
@@ -52,7 +64,7 @@ describe("handleSubmission (mock mode)", () => {
     const d = deps();
     const out = await handleSubmission({ ...base, job_title: "Teacher", school: "P.S. 321 William Penn" }, d);
     await out.background;
-    expect(d.posts[0]).toContain("principal or an assistant principal");
+    expect(listOutbox()[0].draft?.body).toContain("principal or an assistant principal");
   });
 
   it("existing customer → owner, no BDR calendar", async () => {

@@ -8,7 +8,7 @@ import { adoptingSoon, isHotDistrict, isNyc, meetingForLevel, roleGroup, routeFo
 import type { Decision, Level, SfContext, StarbridgeResult, Submission } from "./types";
 
 const ScoreSchema = z.object({
-  tier: z.enum(["1", "2", "3"]),
+  tier: z.enum(["0", "1", "2", "3"]),
   reason: z.string(),
 });
 
@@ -78,12 +78,13 @@ export const claudeScorer: Scorer = async (sub, sf, sb) => {
 export const mockScorer: Scorer = async (sub, _sf, sb) => {
   await new Promise((r) => setTimeout(r, 400));
   const group = roleGroup(sub.job_title);
-  const why = adoptingSoon(sub) || isHotDistrict(sb);
+  // A teacher's adoption answer isn't reliable on its own, so only a hot district counts for end users.
+  const why = group === "end_user" ? isHotDistrict(sb) : adoptingSoon(sub) || isHotDistrict(sb);
   const level: Level =
     group === "decision_maker" ? (why ? 3 : 2)
     : group === "champion" ? 2
     : why ? 2 : 1;
-  return { level, reason: `Mock: ${group.replace("_", " ")}${why ? " with a WHY NOW (adopting soon or hot district)" : ", no WHY NOW yet"}.` };
+  return { level, reason: `Mock: ${group.replace("_", " ")}${why ? " with a WHY NOW" : ", no WHY NOW yet"}.` };
 };
 
 /** Run a scorer with a hard timeout. Any failure becomes Level 2 so nobody waits on a broken step. */

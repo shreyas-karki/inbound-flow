@@ -85,22 +85,25 @@ export async function handleSubmission(raw: unknown, deps: Deps = defaultDeps())
     let draft: ReplyDraft | undefined;
     let draftError: string | undefined;
 
-    // Existing customers and open deals belong to their owner: no AI reply.
+    // Existing customers and open deals belong to their owner, and Level 0 gets the automatic email: no AI reply.
     const [writeOut, draftOut] = await Promise.all([
       time("salesforce_write", () => deps.salesforce.upsertContact(sub, sf, decision)).catch((err) => {
         errors.push(`salesforce_write: ${msg(err)}`);
         return { action: "skipped", note: `Write failed: ${msg(err)}` } as WriteResult;
       }),
-      decision.route === "owner" ? Promise.resolve({}) : time("draft", () => draftWithFallback(deps.drafter, sub, sf, sb, decision, next)),
+      decision.route === "owner" || decision.level === 0 ? Promise.resolve({}) : time("draft", () => draftWithFallback(deps.drafter, sub, sf, sb, decision, next)),
     ]);
     write = writeOut;
     ({ draft, error: draftError } = draftOut as { draft?: ReplyDraft; error?: string });
     if (draftError) errors.push(`draft: ${draftError}`);
 
-    try {
-      await time("slack", () => deps.slack(buildSlackMessage(sub, sf, sb, decision, write, next, draft)));
-    } catch (err) {
-      errors.push(`slack: ${msg(err)}`);
+    // Levels 0 and 1 need no sales action, and each post costs a BDR a read.
+    if (decision.level >= 2) {
+      try {
+        await time("slack", () => deps.slack(buildSlackMessage(sub, sf, sb, decision, write, next, draft)));
+      } catch (err) {
+        errors.push(`slack: ${msg(err)}`);
+      }
     }
 
     addToOutbox({

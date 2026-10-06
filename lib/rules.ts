@@ -1,5 +1,5 @@
 import { rulesConfig } from "./config";
-import type { Decision, RoleGroup, SfContext, StarbridgeResult, Submission } from "./types";
+import type { Decision, Level, RoleGroup, SfContext, StarbridgeResult, Submission } from "./types";
 
 /** Clear-cut cases decided without AI. Returns null when Claude should score. */
 export function applyRules(sub: Submission, sf: SfContext): Decision | null {
@@ -25,11 +25,11 @@ export function applyRules(sub: Submission, sf: SfContext): Decision | null {
   }
 
   if (sub.country && !rulesConfig.servedCountries.includes(sub.country)) {
-    return { level: 1, route: "email", reason: `Outside served markets (${sub.country}).`, source: "rules" };
+    return { level: 0, route: "email", reason: `Outside served markets (${sub.country}).`, source: "rules" };
   }
 
-  if (rulesConfig.level1Roles.includes(sub.job_title)) {
-    return { level: 1, route: "email", reason: `Role "${sub.job_title}" is not a buyer.`, source: "rules" };
+  if (rulesConfig.level0Roles.includes(sub.job_title)) {
+    return { level: 0, route: "email", reason: `Role "${sub.job_title}" is not a buyer.`, source: "rules" };
   }
 
   return null;
@@ -62,10 +62,10 @@ export function isNyc(sub: Submission, sf: SfContext): boolean {
   return /\bNYC\b|New York City|\bNYCDOE\b|\bP\.?S\.? ?\d+|\bI\.?S\.? ?\d+|\bM\.?S\.? ?\d+/i.test(names);
 }
 
-export function routeForLevel(level: 1 | 2 | 3): Decision["route"] {
+export function routeForLevel(level: Level): Decision["route"] {
   return level === 3 ? "gm" : level === 2 ? "bdr" : "email";
 }
 
-export function meetingForLevel(level: 1 | 2 | 3): Decision["meeting"] {
+export function meetingForLevel(level: Level): Decision["meeting"] {
   return level === 3 ? "first_touch" : level === 2 ? "discovery" : undefined;
 }

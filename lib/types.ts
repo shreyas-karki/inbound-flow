@@ -26,7 +26,7 @@ export const SubmissionSchema = z.object({
 });
 export type Submission = z.infer<typeof SubmissionSchema>;
 
-export type Level = 1 | 2 | 3;
+export type Level = 0 | 1 | 2 | 3;
 
 export interface SfContext {
   matchedBy: "email" | "email-domain" | "account-name" | "none";
