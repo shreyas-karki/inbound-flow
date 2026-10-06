@@ -75,11 +75,12 @@ input:focus,select:focus,button:focus-visible,a:focus-visible{outline:2px solid 
 body[data-done] .hero{display:none}
 body[data-done] main .wrap{grid-template-columns:1fr}
 body[data-done] .card{width:min(100%,760px);margin-inline:auto}
-body[data-booking] .card{width:min(100%,1000px)}
-.booking .sub{margin-bottom:20px}
-.booking .cal{height:max(660px,calc(100vh - 280px))}
+/* booking: just the calendar, no card around it */
+body[data-booking] .card{width:min(100%,1000px);padding:0;border:0;background:none}
+body[data-booking] .cal{height:max(700px,calc(100vh - 140px));background:var(--surface)}
 @media (max-width:560px){
-  .booking .cal{width:calc(100% + 40px);margin-inline:-20px;border-radius:0;border-inline:0;height:760px}
+  body[data-booking] .cal{height:820px;border-radius:0;border-inline:0}
+  body[data-booking] main .wrap{padding-inline:0}
 }
 </style>
 </head>
@@ -163,11 +164,8 @@ body[data-booking] .card{width:min(100%,1000px)}
 </template>
 
 <template id="tBook">
-  <div class="booking">
   <h2 data-title></h2>
   <p class="sub" data-sub></p>
-  <div class="book"></div>
-  </div>
 </template>
 
 <script>
@@ -263,26 +261,19 @@ function render(out, data) {
     done.append($(out.level === 0 ? "#tLevel0" : "#tLevel1").content.cloneNode(true));
     $("[data-email]", done).textContent = data.email;
   } else {
-    // Level 3 books the growth manager's deep-dive directly; Level 2 books a short call with a BDR.
-    const l3 = out.level === 3;
-    const hasCal = next.type === "calendar" && next.url;
-    done.append($("#tBook").content.cloneNode(true));
-    $("[data-title]", done).textContent = l3 ? "Book your deep-dive with our growth team" : "Book a quick call with our math team";
-    $("[data-sub]", done).textContent = l3
-      ? "You qualify to skip the intro call. Pick a time to walk through the digital samples with our growth manager, and we'll ship physical samples to your school after."
-      : hasCal
-        ? "Pick a time and someone from our math team will call you for a 10-minute chat about what you need and what we can bring you."
-        : "Someone from our math team will call you within one business day for a 10-minute chat about what you need and what we can bring you.";
-
-    if (hasCal) {
+    // Level 3 books the growth manager, Level 2 the BDR. The Calendly event description explains the
+    // meeting, so the calendar stands alone; text only shows when no calendar is configured.
+    if (next.type === "calendar" && next.url) {
       document.body.dataset.booking = "";
       const frame = document.createElement("iframe");
       frame.className = "cal";
       frame.src = withPrefill(next.url, data);
       frame.title = `Booking calendar for ${next.host}`;
-      $(".book", done).append(frame);
-    } else if (l3) {
-      $(".book", done).innerHTML = `<p class="notice">We'll reach out within one business day to set up a time.</p>`;
+      done.append(frame);
+    } else {
+      done.append($("#tBook").content.cloneNode(true));
+      $("[data-title]", done).textContent = out.level === 3 ? "Thanks, our growth team will be in touch" : "Thanks, our math team will be in touch";
+      $("[data-sub]", done).textContent = "Someone will call you within one business day to set up a time.";
     }
   }
   document.body.dataset.done = "";
