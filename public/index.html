@@ -234,16 +234,53 @@ $("#form").addEventListener("submit", async (e) => {
   form.hidden = true;
   $("#vWait").hidden = false;
   try {
-    const res = await fetch("/api/submit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
-    const out = await res.json();
-    if (!res.ok || !out.ok) throw new Error(out.error || "Something went wrong.");
-    render(out, data);
+    render(await route(data), data);
   } catch (ex) {
     $("#vWait").hidden = true;
     form.hidden = false;
     show(err, ex.message + " Please try again.");
   }
 });
+
+async function route(data) {
+  const res = await fetch("/api/submit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+  const out = await res.json();
+  if (!res.ok || !out.ok) throw new Error(out.error || "Something went wrong.");
+  return out;
+}
+
+// Handoff from the live Unbounce page: its form confirmation is "Go to URL" with form data appended.
+// Unbounce field IDs that differ from ours get renamed; everything else passes through.
+const UNBOUNCE_FIELDS = {
+  first_name: "name",
+  last_name: "surname",
+  user_profile: "job_title",
+  when_is_your_district_planning_to_adopt_a_new_math_curriculum: "adoption_timeline",
+};
+(async function handoff() {
+  let saved = null;
+  if (!params.get("email")) try { saved = JSON.parse(sessionStorage.getItem("handoff") || "null"); } catch {}
+  if (!saved && !params.get("email")) return;
+
+  $("#form").hidden = true;
+  $("#vWait").hidden = false;
+  const data = saved?.data ?? {};
+  if (!saved) {
+    for (const [k, v] of params) data[UNBOUNCE_FIELDS[k] || k] = v;
+    data.page_url = document.referrer || "https://forms.innovamat.com/request-samples/";
+    // Keep the lead's details out of the address bar and browser history.
+    history.replaceState(null, "", location.pathname);
+  }
+  try {
+    // A reload shows the same result instead of routing (and posting to Slack) twice.
+    const out = saved?.out ?? (await route(data));
+    try { sessionStorage.setItem("handoff", JSON.stringify({ data, out })); } catch {}
+    render(out, data);
+  } catch {
+    // Unbounce already captured the lead, so never send them back to a form.
+    render({ ok: true, route: "owner", next: { message: "Your request is on its way to our team. We'll get back to you soon." } }, data);
+  }
+})();
 
 function render(out, data) {
   const done = $("#vDone");
@@ -283,7 +320,7 @@ function render(out, data) {
       book.innerHTML = `<h3></h3><p class="hint">Click a day, then a time. The invite lands in your inbox.</p><iframe class="cal"></iframe>`;
       $("h3", book).textContent = l3 ? "Pick a time for your deep-dive" : "Pick a time for your 10-minute call";
       const frame = $("iframe", book);
-      frame.src = next.url;
+      frame.src = withPrefill(next.url, data);
       frame.title = `Booking calendar for ${next.host}`;
     } else {
       book.innerHTML = `<p class="notice">We'll reach out within one business day to set up a time.</p>`;
@@ -293,6 +330,17 @@ function render(out, data) {
   $("#vWait").hidden = true;
   done.hidden = false;
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// Calendly fills in name and email from the URL, so booking takes two clicks.
+function withPrefill(url, data) {
+  if (!/calendly\.com/.test(url)) return url;
+  const u = new URL(url);
+  u.searchParams.set("name", `${data.name || ""} ${data.surname || ""}`.trim());
+  u.searchParams.set("email", data.email || "");
+  u.searchParams.set("embed_type", "Inline");
+  u.searchParams.set("embed_domain", location.host);
+  return u.toString();
 }
 
 function bad(name, text) {
