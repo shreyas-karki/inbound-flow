@@ -69,3 +69,4 @@ This is an MVP for Thinking Math! in the US and Canada.
 - Post calendar bookings to Slack once they happen.
 - Extend the flow to other products (such as Math Journeys) and markets.
 - Add spam protection if bot traffic shows up.
+ 

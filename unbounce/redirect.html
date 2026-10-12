@@ -7,9 +7,10 @@
 (function () {
   var ROUTER_URL = "https://inbound-flow.vercel.app/";
   // Unbounce field IDs. Phone stays out of the URL on purpose: routing doesn't need it.
+  // "message" is the free-text box (the rubric's strongest signal); "state" picks the BDR and First Touch owner.
   var FIELDS = [
-    "first_name", "last_name", "email", "school", "country", "user_profile",
-    "when_is_your_district_planning_to_adopt_a_new_math_curriculum",
+    "first_name", "last_name", "email", "school", "state", "country", "user_profile",
+    "when_is_your_district_planning_to_adopt_a_new_math_curriculum", "message",
     "utm_source", "utm_medium", "utm_campaign", "utm_content"
   ];
   var captured = null;

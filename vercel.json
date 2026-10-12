@@ -1,5 +1,6 @@
 {
   "functions": {
-    "api/submit.ts": { "maxDuration": 20, "includeFiles": "prompts/**" }
+    "api/submit.ts": { "maxDuration": 20, "includeFiles": "prompts/**" },
+    "api/tier.ts": { "maxDuration": 25, "includeFiles": "prompts/**" }
   }
 }

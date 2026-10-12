@@ -2,3 +2,7 @@ node_modules
 .env
 .env.local
 .vercel
+
+# Make scenario exports: Salesforce, Slack and connection IDs. Keep out of git.
+*.blueprint.json
+.env copy

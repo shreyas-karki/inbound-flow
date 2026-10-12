@@ -33,9 +33,33 @@ In `MOCK_MODE=true` everything is fake and offline: sample accounts, sample Star
 2. **Salesforce**: set `SALESFORCE_USERNAME`, `SALESFORCE_PASSWORD` and `SALESFORCE_SECURITY_TOKEN` (Salesforce → Settings → Reset My Security Token), then `MOCK_MODE=false`. `SALESFORCE_LOGIN_URL` defaults to `https://login.salesforce.com`. The router logs in with SOAP `login()` and uses the session for REST calls, so no Connected App is needed. Before going to production, switch to a dedicated integration user rather than a personal login.
    - Keep `SF_WRITE_MODE=dry-run` at first: the router reads real data and logs the exact fields it *would* write (`sf_payload` in the logs). Flip to `live` once a few dry runs look right.
 3. **Slack**: create an incoming webhook for the inbound channel and set `SLACK_WEBHOOK_URL`.
-4. **Calendars**: create Google Calendar appointment schedules for the BDR and the growth manager and paste the booking-page links into `BDR_BOOKING_URL` / `GM_BOOKING_URL`.
+4. **Calendars**: hosts and booking links come from the routing sheet (see [Routing sheet](#routing-sheet)). `BDR_BOOKING_URL` / `GM_BOOKING_URL` are only fallbacks for when the sheet has no link.
 5. **Deploy**: `npx vercel` (first time links the project), add the same env vars in the Vercel dashboard, then `npx vercel --prod`.
 6. **Traffic**: send a share of campaign traffic to the new page with `utm_content=router_v1` and compare against the current page.
+
+## Tiered test: the app decides, Make acts
+
+For the A/B test (steps in [LAUNCH.md](LAUNCH.md)), a new Make scenario receives the Unbounce webhook and asks this app for the decision, then does the Salesforce writes, Slack post, Task, SMS and Iterable sync itself.
+
+- **`POST /api/tier`** takes `{ "data": <Unbounce data.json>, "page_url", "page_name" }` with the header `x-inbound-secret: $TIER_SECRET` (401 without it). It always answers 200 with a flat body: `level, route, meeting, reason, source, fallback, internal_test, decision_maker, state, host_name, host_user_id, also_add, booking_url, starbridge_*, sf_contact_id, sf_account_id, sf_match, open_opp_id, slack_text, cached`. On any failure it answers Level 2 with `fallback: true`.
+- **Decide once.** The lead's browser (`/api/submit`) and Make both ask about the same lead within seconds. The first one scores it, and the second gets the cached answer, so the calendar on the page always matches the level in Slack. The cache is keyed on email + role + adoption timeline and kept for 2 hours in Upstash Redis (`KV_REST_API_*` or `UPSTASH_REDIS_REST_*`), or in memory when Redis isn't set.
+- **`ACTIONS_OWNER=make`** stops this app from writing Salesforce, posting to Slack and drafting the AI reply. It still decides, shows the page and logs. The default `app` keeps today's behaviour.
+- **Field names:** both endpoints accept Unbounce's field IDs (`first_name`, `user_profile`, `message`, …), array-wrapped or not. See `lib/unbounce.ts`.
+- **Try it:** `scripts/try-tier.sh` sends each `test/fixtures/unbounce-*.json` to a running server. Locally the dev server's secret is `local-dev-secret`.
+
+## Routing sheet
+
+"US - Mapping Owners for Inbounds", each tab published to the web as CSV and cached for 10 minutes (`lib/calendars.ts`):
+
+| Tab | Env var | Used for |
+|---|---|---|
+| `Mapping` (US State, Owner, User Long ID, …) | `SHEET_MAPPING_CSV_URL` | Levels 0-2: the state's BDR. Level 2 books on their calendar. |
+| `ft_owners` (State, Owner, Owner ID, Also add) | `SHEET_FT_OWNERS_CSV_URL` | Level 3: the state's First Touch owner, plus who to add to the call |
+| `calendar_links` (SF Long ID, SF Name, Calendar Link) | `SHEET_CALENDARS_CSV_URL` | Each person's Google appointment page, found by user ID, then by full name |
+
+- **The lead's state** comes from the form, then the Salesforce district's "(City, ST)", then Starbridge. A state without a row uses the `Other` row.
+- **Links:** `calendar.app.google` short links are expanded automatically. Full links work with or without `/u/0/`. A person without a working link gets "someone will reach out" instead of a calendar.
+- **Careful:** Make scenario 172177 reads columns A and C of `Mapping`. Only add columns or tabs there.
 
 ## What it writes to Salesforce
 
@@ -56,8 +80,13 @@ Follows Innovamat's US inbound model (from the innovamat-salesforce knowledge ba
 ## Project layout
 
 ```
-api/submit.ts        Vercel function (POST /api/submit)
-lib/router.ts        The pipeline, timings and logging
+api/submit.ts        Vercel function (POST /api/submit): the page and the Unbounce handoff
+api/tier.ts          Vercel function (POST /api/tier): Make asks for the decision
+lib/router.ts        The pipeline (decide, then act), timings and logging
+lib/tier.ts          /api/tier: secret check, Make's response shape, fallback
+lib/decisions.ts     Decide once per lead (Upstash Redis or in memory)
+lib/calendars.ts     Routing sheet: state → BDR / First Touch owner → calendar
+lib/unbounce.ts      Unbounce field IDs → ours
 lib/salesforce.ts    Lookup + contact upsert (live and mock clients)
 lib/starbridge.ts    Starbridge Account Scoring lookup (Top Buyers bridge)
 lib/score.ts         Claude scoring with zod-validated JSON, timeout fallback
@@ -65,14 +94,16 @@ lib/rules.ts         Hard rules that run before Claude
 lib/slack.ts         Slack message + Level 1 draft
 public/index.html    The landing page and form (RevOps field IDs)
 dev-server.ts        Local server for npm run dev
+unbounce/redirect.html  Script for the Unbounce page: hands the lead to this app after submit
+scripts/try-tier.sh  Sends the sample payloads in test/fixtures to /api/tier
 ```
 
 ## Known gaps (MVP)
 
-- **Unbounce:** its webhook is server-to-server, so it can't show the calendar after submit. To use this flow on Unbounce, the page needs a small script that posts to `/api/submit` itself.
-- **Calendar bookings don't post to Slack yet.** Google appointment schedules have no booking webhook. Add a Calendar API watch later, or move to Calendly/Chili Piper.
+- **Unbounce:** its webhook is server-to-server, so it can't show the calendar after submit. `unbounce/redirect.html` hands the lead to this app's page instead.
+- **Calendar bookings don't post to Slack yet.** Google appointment schedules have no booking webhook. Planned: a Make scenario that watches each host's Google Calendar for new bookings.
 - **No rate limiting** beyond the honeypot and minimum fill time. Add Vercel Firewall rules or Cloudflare Turnstile if spam shows up.
-- **Routing is one BDR + one GM.** Many US district accounts already have an owner. Routing to the account owner is the obvious next step.
+- **Charter and private schools** aren't detected yet, so they route by state like everyone else (see LAUNCH.md, "Who runs First Touches").
 
 ## Qualification and the AI SDR reply
 

@@ -50,10 +50,30 @@ export const config = {
     // Who signs the AI SDR reply and whose inbox the draft is meant for.
     replyFromName: env("REPLY_FROM_NAME", env("BDR_NAME", "Luis")),
     replyFromEmail: env("REPLY_FROM_EMAIL"),
+    // Fallbacks for when the routing sheet has no row or link for the lead's state.
     bdrName: env("BDR_NAME", "Luis"),
     bdrBookingUrl: env("BDR_BOOKING_URL"),
     gmName: env("GM_NAME", "Growth Manager"),
     gmBookingUrl: env("GM_BOOKING_URL"),
+  },
+
+  // "US - Mapping Owners for Inbounds", each tab published to the web as CSV. See lib/calendars.ts.
+  sheets: {
+    mappingCsvUrl: env("SHEET_MAPPING_CSV_URL"),
+    calendarsCsvUrl: env("SHEET_CALENDARS_CSV_URL"),
+    ftOwnersCsvUrl: env("SHEET_FT_OWNERS_CSV_URL"),
+  },
+
+  // Who acts on a decision. "app": this app writes Salesforce, posts to Slack and drafts the AI reply.
+  // "make": the Make scenario does all of that from /api/tier's answer, and this app only decides and logs.
+  actionsOwner: (env("ACTIONS_OWNER", "app") === "make" ? "make" : "app") as "app" | "make",
+  // Shared secret Make sends in the x-inbound-secret header. /api/tier refuses every call when unset.
+  tierSecret: env("TIER_SECRET"),
+
+  // Upstash Redis from the Vercel Marketplace (it sets one of these pairs). Unset: in-memory, one instance only.
+  redis: {
+    url: env("KV_REST_API_URL", env("UPSTASH_REDIS_REST_URL")),
+    token: env("KV_REST_API_TOKEN", env("UPSTASH_REDIS_REST_TOKEN")),
   },
 };
 

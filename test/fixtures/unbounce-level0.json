@@ -1,0 +1,12 @@
+{
+  "data": {
+    "first_name": ["Pat"], "last_name": ["Parent"], "email": ["pat.parent@example.org"], "phone_number": ["5555550100"],
+    "user_profile": ["Parent or Homeschooler"], "school": ["Riverside Unified"], "state": ["Ohio"],
+    "country": ["United States of America"],
+    "when_is_your_district_planning_to_adopt_a_new_math_curriculum": ["I'm not sure"],
+    "message": ["Looking for worksheets for my kids at home."],
+    "utm_source": ["google"], "utm_campaign": ["samples-test"]
+  },
+  "page_url": "https://forms.innovamat.com/request-samples-b/",
+  "page_name": "Request Samples (test)"
+}

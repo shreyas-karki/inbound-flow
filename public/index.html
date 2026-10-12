@@ -214,14 +214,8 @@ async function route(data) {
   return out;
 }
 
-// Handoff from the live Unbounce page: its form confirmation is "Go to URL" with form data appended.
-// Unbounce field IDs that differ from ours get renamed; everything else passes through.
-const UNBOUNCE_FIELDS = {
-  first_name: "name",
-  last_name: "surname",
-  user_profile: "job_title",
-  when_is_your_district_planning_to_adopt_a_new_math_curriculum: "adoption_timeline",
-};
+// Handoff from the Unbounce page (unbounce/redirect.html sends the answers in the URL).
+// Fields keep their Unbounce IDs; the server renames them (lib/unbounce.ts).
 (async function handoff() {
   let saved = null;
   if (!params.get("email")) try { saved = JSON.parse(sessionStorage.getItem("handoff") || "null"); } catch {}
@@ -231,7 +225,7 @@ const UNBOUNCE_FIELDS = {
   $("#vWait").hidden = false;
   const data = saved?.data ?? {};
   if (!saved) {
-    for (const [k, v] of params) data[UNBOUNCE_FIELDS[k] || k] = v;
+    for (const [k, v] of params) data[k] = v;
     data.page_url = document.referrer || "https://forms.innovamat.com/request-samples/";
     // Keep the lead's details out of the address bar and browser history.
     history.replaceState(null, "", location.pathname);
@@ -255,19 +249,19 @@ function render(out, data) {
   if (out.route === "owner") {
     // Existing customer or open deal: their Innovamat contact follows up.
     done.innerHTML = `<h2>Thanks, <span data-name></span>!</h2><p class="sub" data-msg></p>`;
-    $("[data-name]", done).textContent = data.name;
+    $("[data-name]", done).textContent = data.name || data.first_name || "";
     $("[data-msg]", done).textContent = next.message;
   } else if (out.level === 0 || out.level === 1) {
     done.append($(out.level === 0 ? "#tLevel0" : "#tLevel1").content.cloneNode(true));
     $("[data-email]", done).textContent = data.email;
   } else {
-    // Level 3 books the growth manager, Level 2 the BDR. The Calendly event description explains the
-    // meeting, so the calendar stands alone; text only shows when no calendar is configured.
+    // Level 3 books the growth manager, Level 2 the BDR, on their Google appointment schedule. The schedule's
+    // description explains the meeting, so the calendar stands alone; text only shows when no calendar is configured.
     if (next.type === "calendar" && next.url) {
       document.body.dataset.booking = "";
       const frame = document.createElement("iframe");
       frame.className = "cal";
-      frame.src = withPrefill(next.url, data);
+      frame.src = next.url;
       frame.title = `Booking calendar for ${next.host}`;
       done.append(frame);
     } else {
@@ -280,18 +274,6 @@ function render(out, data) {
   $("#vWait").hidden = true;
   done.hidden = false;
   window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-// Calendly fills in name and email from the URL, so booking takes two clicks.
-function withPrefill(url, data) {
-  if (!/calendly\.com/.test(url)) return url;
-  const u = new URL(url);
-  u.searchParams.set("name", `${data.name || ""} ${data.surname || ""}`.trim());
-  u.searchParams.set("email", data.email || "");
-  u.searchParams.set("embed_type", "Inline");
-  u.searchParams.set("hide_gdpr_banner", "1");
-  u.searchParams.set("embed_domain", location.host);
-  return u.toString();
 }
 
 function bad(name, text) {

@@ -10,7 +10,8 @@ export const SubmissionSchema = z.object({
   school: z.string().trim().min(1),
   country: z.string().trim().optional().default("United States of America"),
   form_grades: z.string().trim().optional().default(""),
-  needs: z.string().trim().optional().default(""), // TODO: confirm field ID with RevOps
+  needs: z.string().trim().optional().default(""), // the form's free-text "message" box
+  state: z.string().trim().optional().default(""), // "NY" or "New York"; picks the BDR and First Touch owner
   // "When is your district planning to adopt a new math curriculum?"
   // (Unbounce ID: when_is_your_district_planning_to_adopt_a_new_math_curriculum)
   adoption_timeline: z.string().trim().optional().default(""),
@@ -74,8 +75,9 @@ export type RoleGroup = "decision_maker" | "champion" | "end_user" | "other";
 
 export interface Decision {
   level: Level;
+  // "gm" = Level 3 First Touch, booked with the state's First Touch owner (ft_owners tab).
   route: "email" | "bdr" | "gm" | "owner";
-  // Level 3 = First Touch with a decision maker (growth manager). Level 2 = Discovery (BDR).
+  // Level 3 = First Touch with a decision maker. Level 2 = Discovery (BDR).
   meeting?: "first_touch" | "discovery";
   reason: string;
   source: "rules" | "claude" | "fallback";
@@ -87,6 +89,15 @@ export interface WriteResult {
   contactId?: string;
   note?: string;
   payload?: Record<string, unknown>;
+}
+
+/** Who follows up on a lead. userId is a Salesforce User Id, for Make to set as the Contact and Task owner. */
+export interface Host {
+  name: string;
+  userId?: string;
+  bookingUrl?: string; // raw sheet link; nextStep() makes it embeddable
+  alsoAdd: string[]; // First Touch: people to add to the call
+  source: "first_touch_sheet" | "bdr_sheet" | "salesforce" | "env";
 }
 
 export interface NextStep {

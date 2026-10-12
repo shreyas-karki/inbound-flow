@@ -5,10 +5,15 @@ import { createSalesforce } from "../lib/salesforce";
 import { lookupAccountScore } from "../lib/starbridge";
 import { mockDrafter } from "../lib/sdr";
 import { listOutbox } from "../lib/outbox";
+import { EMPTY_TABLES } from "../lib/calendars";
+import { memoryStore } from "../lib/decisions";
 
 const deps = (): Deps & { posts: string[] } => {
   const posts: string[] = [];
-  return { salesforce: createSalesforce(), starbridge: lookupAccountScore, scorer: mockScorer, drafter: mockDrafter, slack: async (t) => { posts.push(t); }, posts };
+  return {
+    salesforce: createSalesforce(), starbridge: lookupAccountScore, scorer: mockScorer, drafter: mockDrafter, slack: async (t) => { posts.push(t); },
+    routing: async () => EMPTY_TABLES, store: memoryStore(), actionsOwner: "app", posts,
+  };
 };
 const base = { name: "Dana", surname: "W", email: "d@example.org", country: "United States of America" };
 
@@ -102,6 +107,9 @@ describe("embeddable", () => {
   it("adds gv=true to Google appointment schedule URLs so they load in an iframe", () => {
     expect(embeddable("https://calendar.google.com/calendar/appointments/schedules/AcZ")).toBe("https://calendar.google.com/calendar/appointments/schedules/AcZ?gv=true");
     expect(embeddable("https://calendar.google.com/calendar/appointments/schedules/AcZ?gv=true")).toBe("https://calendar.google.com/calendar/appointments/schedules/AcZ?gv=true");
-    expect(embeddable("https://calendly.com/x")).toBe("https://calendly.com/x");
+    // The sheet's variants: signed-in /u/0/ links and links without /calendar/.
+    expect(embeddable("https://calendar.google.com/calendar/u/0/appointments/schedules/AcZ")).toBe("https://calendar.google.com/calendar/appointments/schedules/AcZ?gv=true");
+    expect(embeddable("https://calendar.google.com/appointments/schedules/AcZ")).toBe("https://calendar.google.com/calendar/appointments/schedules/AcZ?gv=true");
+    expect(embeddable("https://example.com/book")).toBe("https://example.com/book");
   });
 });

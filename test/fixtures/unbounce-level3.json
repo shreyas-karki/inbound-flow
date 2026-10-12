@@ -1,0 +1,12 @@
+{
+  "data": {
+    "first_name": ["Dana"], "last_name": ["Director"], "email": ["dana.director@example.org"], "phone_number": ["5555550103"],
+    "user_profile": ["Curriculum Director"], "school": ["Lakeview County Schools"], "state": ["IN"],
+    "country": ["United States of America"],
+    "when_is_your_district_planning_to_adopt_a_new_math_curriculum": ["SY26-27"],
+    "message": ["We're reviewing K-8 math programs this spring."],
+    "utm_source": ["google"], "utm_campaign": ["samples-test"]
+  },
+  "page_url": "https://forms.innovamat.com/request-samples-b/",
+  "page_name": "Request Samples (test)"
+}

@@ -1,0 +1,12 @@
+{
+  "data": {
+    "first_name": ["Terry"], "last_name": ["Teacher"], "email": ["terry.teacher@example.org"], "phone_number": ["5555550101"],
+    "user_profile": ["Teacher"], "school": ["Riverside Unified"], "state": ["Michigan"],
+    "country": ["United States of America"],
+    "when_is_your_district_planning_to_adopt_a_new_math_curriculum": ["No plans yet"],
+    "message": ["Ideas for teaching fractions."],
+    "utm_source": ["google"], "utm_campaign": ["samples-test"]
+  },
+  "page_url": "https://forms.innovamat.com/request-samples-b/",
+  "page_name": "Request Samples (test)"
+}
