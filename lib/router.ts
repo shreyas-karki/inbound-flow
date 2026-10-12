@@ -6,7 +6,7 @@ import { config } from "./config";
 import { decideOnce, decisionKey, defaultStore, DECISION_TTL_SEC, FALLBACK_TTL_SEC, type Store } from "./decisions";
 import { addToOutbox } from "./outbox";
 import { applyRules, isInternalTest, meetingForLevel } from "./rules";
-import { createSalesforce, emailDomain, type SalesforceClient } from "./salesforce";
+import { createSalesforce, emailDomain, schoolName, type SalesforceClient } from "./salesforce";
 import { claudeScorer, mockScorer, scoreWithFallback, type Scorer } from "./score";
 import { claudeDrafter, draftWithFallback, mockDrafter, type Drafter } from "./sdr";
 import { buildSlackMessage, postToSlack } from "./slack";
@@ -83,7 +83,7 @@ export async function decide(sub: Submission, deps: Deps): Promise<Decided> {
     errors.push(`salesforce_lookup: ${msg(err)}`);
     return { matchedBy: "none" };
   });
-  const starbridge = (code?: string) => time("starbridge", () => deps.starbridge(sub.school, code, emailDomain(sub.email)));
+  const starbridge = (code?: string) => time("starbridge", () => deps.starbridge(schoolName(sub.school), code, emailDomain(sub.email)));
 
   // Starbridge needs the state to pick the right district. When the form has it, both lookups run at once
   // (Starbridge alone can take 5+ seconds); otherwise Starbridge waits for the "(City, ST)" on the Salesforce district.

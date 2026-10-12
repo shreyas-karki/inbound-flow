@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildContactFields, soqlString } from "../lib/salesforce";
+import { buildContactFields, coreName, schoolName, soqlString } from "../lib/salesforce";
 import { SubmissionSchema } from "../lib/types";
 
 const sub = SubmissionSchema.parse({
@@ -98,5 +98,13 @@ describe("login", async () => {
   it("reads tags with or without a namespace prefix", () => {
     expect(xmlTag("<result><sessionId>00D!abc</sessionId></result>", "sessionId")).toBe("00D!abc");
     expect(xmlTag("<soapenv:faultstring>INVALID_LOGIN</soapenv:faultstring>", "faultstring")).toBe("INVALID_LOGIN");
+  });
+});
+
+describe("schoolName", () => {
+  it("drops the \" - City, County\" the form's school search adds, but keeps hyphenated names", () => {
+    expect(schoolName("John F Kennedy Elementary School - Port Chester, Westchester County")).toBe("John F Kennedy Elementary School");
+    expect(schoolName("Port Chester-Rye Union Free School District")).toBe("Port Chester-Rye Union Free School District");
+    expect(coreName("Ajo Unified School District - Ajo, Pima County")).toBe("ajo");
   });
 });

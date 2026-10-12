@@ -73,7 +73,7 @@ const GENERIC_WORDS = /\b(the|school|schools|district|public|unified|independent
 
 /** "[School District] Ajo Unified District (Ajo, AZ)" → "ajo". Same for what people type in the form. */
 export function coreName(name: string): string {
-  return name
+  return schoolName(name)
     .toLowerCase()
     .replace(/^\[[^\]]*\]\s*/, "")
     .replace(/\([^)]*\)\s*$/, "")
@@ -81,6 +81,14 @@ export function coreName(name: string): string {
     .replace(/[^a-z0-9 ]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/**
+ * The Unbounce school search fills the form with "<Name> - <City>, <County>" (the Account_Name_Web__c format).
+ * Name searches want just the name; "Port Chester-Rye" (no spaces around the dash) stays whole.
+ */
+export function schoolName(school: string): string {
+  return school.replace(/\s+-\s+[^-]*$/, "").trim();
 }
 
 const DISTRICT_PREFIX = "[School District]";
@@ -257,8 +265,12 @@ class LiveSalesforce implements SalesforceClient {
     if (!ctx.account) {
       const select = `SELECT ${ACCOUNT_FIELDS} FROM Account`;
       const scope = `Country__c = '${US}' AND Label__c != 'TEST'`;
-      let accounts = await this.query<any>(
-        `${select} WHERE Name LIKE '%${soqlLike(sub.school)}%' AND ${scope} ORDER BY ParentId NULLS FIRST, Name LIMIT 10`,
+      // A pick from the form's school search is exactly Account_Name_Web__c, which is what Make matches on too.
+      const exact = await this.query<any>(
+        `${select} WHERE Account_Name_Web__c = '${soqlString(sub.school)}' AND ${scope} LIMIT 2`,
+      );
+      let accounts = exact.length === 1 ? exact : await this.query<any>(
+        `${select} WHERE Name LIKE '%${soqlLike(schoolName(sub.school))}%' AND ${scope} ORDER BY ParentId NULLS FIRST, Name LIMIT 10`,
       );
       // "Ajo Unified School District" vs "[School District] Ajo Unified District (Ajo, AZ)": retry on the first distinctive word.
       const keyword = coreName(sub.school).split(" ")[0];
