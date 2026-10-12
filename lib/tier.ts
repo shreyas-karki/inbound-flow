@@ -5,7 +5,7 @@ import { timingSafeEqual } from "node:crypto";
 import { config } from "./config";
 import { decideLead, defaultDeps, log, parseSubmission, type Decided, type Deps } from "./router";
 import { isDecisionMaker, isInternalTest } from "./rules";
-import { buildSlackMessage } from "./slack";
+import { buildSlackHeader, buildSlackMessage } from "./slack";
 import { describeScore } from "./starbridge";
 import type { Submission } from "./types";
 
@@ -79,7 +79,9 @@ export function tierBody(sub: Submission, d: Decided, cached: boolean): Record<s
     sf_account_id: sf.account?.id ?? null,
     sf_match: sf.matchedBy,
     open_opp_id: sf.openOpportunity?.id ?? null,
-    slack_text: buildSlackMessage(sub, sf, sb, decision, next, { host }),
+    slack_text: buildSlackMessage(sub, sf, sb, decision, next, { host, state: d.state }),
+    // Just the level, reason, calendar and Starbridge, for Make to put on top of its usual post.
+    slack_header: buildSlackHeader(sub, sb, decision, next, host),
     cached,
     // What went wrong along the way (e.g. a Salesforce login failure), and how long each step took, in ms.
     errors: d.errors,
@@ -96,6 +98,7 @@ function fallback(sub: Submission | undefined, reason: string): Record<string, u
     starbridge_score: null, starbridge_fit: null, starbridge_signal: null, starbridge_summary: null,
     sf_contact_id: null, sf_account_id: null, sf_match: "none", open_opp_id: null,
     slack_text: `:warning: *Level 2 by default* · ${who}\n_${reason}_`,
+    slack_header: `:warning: *Level 2 by default* (router unavailable) · New physical sample request :package:\n_${reason}_`,
     cached: false, errors: [reason], timings: {},
   };
 }

@@ -14,6 +14,7 @@ async function main() {
   const { config } = await import("./lib/config.js");
   const { listOutbox } = await import("./lib/outbox.js");
   const { handleTier } = await import("./lib/tier.js");
+  const { warmStarbridge } = await import("./lib/warm.js");
 
   http.createServer(async (req, res) => {
     if (req.method === "POST" && req.url?.split("?")[0] === "/api/tier") {
@@ -34,6 +35,12 @@ async function main() {
       const out = await handleSubmission(body); // out.background keeps running after we reply
       res.writeHead(out.status, { "Content-Type": "application/json" });
       return res.end(JSON.stringify(out.body));
+    }
+    if (req.method === "GET" && req.url?.split("?")[0] === "/api/warm") {
+      const q = new URL(req.url, "http://localhost").searchParams;
+      const work = warmStarbridge({ school: q.get("school") ?? undefined, email: q.get("email") ?? undefined, state: q.get("state") ?? undefined });
+      res.writeHead(202, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" });
+      return res.end(JSON.stringify({ ok: true, warming: Boolean(work) }));
     }
     if (req.method === "GET" && req.url?.split("?")[0] === "/api/outbox") {
       res.writeHead(200, { "Content-Type": "application/json" });

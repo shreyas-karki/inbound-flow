@@ -2,7 +2,7 @@ import { rulesConfig } from "./config";
 import type { Decision, Level, RoleGroup, SfContext, StarbridgeResult, Submission } from "./types";
 
 /** Clear-cut cases decided without AI. Returns null when Claude should score. */
-export function applyRules(sub: Submission, sf: SfContext): Decision | null {
+export function applyRules(sub: Submission, sf: SfContext, sb?: StarbridgeResult): Decision | null {
   const label = sf.account?.label?.toUpperCase();
   if (label && rulesConfig.customerLabels.includes(label)) {
     return {
@@ -30,6 +30,23 @@ export function applyRules(sub: Submission, sf: SfContext): Decision | null {
 
   if (rulesConfig.level0Roles.includes(sub.job_title)) {
     return { level: 0, route: "email", reason: `Role "${sub.job_title}" is not a buyer.`, source: "rules" };
+  }
+
+  // GM fast lane: a hot, sizable district adopting soon, and anyone there who isn't a teacher or coach.
+  const a = sb?.account;
+  const { signalBands, minEnrollment, adoptionTimelines } = rulesConfig.firstTouch;
+  const group = roleGroup(sub.job_title);
+  if (
+    a && (group === "decision_maker" || group === "champion") &&
+    signalBands.includes(a.signalBand) && (a.enrollment ?? 0) >= minEnrollment &&
+    adoptionTimelines.includes(sub.adoption_timeline)
+  ) {
+    return {
+      level: 3,
+      route: "gm",
+      reason: `${sub.job_title} at a ${a.signalBand.toLowerCase()} district (${a.enrollment!.toLocaleString("en-US")} students) adopting ${sub.adoption_timeline}: First Touch.`,
+      source: "rules",
+    };
   }
 
   return null;

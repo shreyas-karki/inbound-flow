@@ -81,9 +81,10 @@ export const mockScorer: Scorer = async (sub, _sf, sb) => {
   const group = roleGroup(sub.job_title);
   // A teacher's adoption answer isn't reliable on its own, so only a hot district counts for end users.
   const why = group === "end_user" ? isHotDistrict(sb) : adoptingSoon(sub) || isHotDistrict(sb);
+  const committee = /\b(committee|leading the review|lead the review)\b/i.test(sub.needs);
   const level: Level =
-    group === "decision_maker" ? (why ? 3 : 2)
-    : group === "champion" ? 2
+    group === "decision_maker" || group === "champion" ? (why ? 3 : 2)
+    : committee ? 3
     : why ? 2 : 1;
   return { level, reason: `Mock: ${group.replace("_", " ")}${why ? " with a WHY NOW" : ", no WHY NOW yet"}.` };
 };

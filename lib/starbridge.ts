@@ -4,7 +4,8 @@
 // (NoSignals/Blocked/Cool/Warm/Hot; Blocked = a competitor already holds the account).
 // Docs: https://hc.starbridge.ai/api-reference/rest/overview.md
 import { config } from "./config";
-import { coreName } from "./salesforce";
+import type { Store } from "./decisions";
+import { coreName, schoolName } from "./salesforce";
 import type { AccountScore, StarbridgeResult } from "./types";
 
 const BASE = "https://dashboard.starbridge.ai/api/external";
@@ -115,18 +116,42 @@ async function fetchScore(district: string, stateCode?: string, domain?: string)
   return { buyerName: buyer.name, stateCode: buyer.stateCode ?? undefined, account: rows.result[0] ? parseScoreRow(rows.result[0].columns) : undefined };
 }
 
-export async function lookupAccountScore(district: string, stateCode?: string, domain?: string): Promise<StarbridgeResult> {
+/** `school` is what the form sent; "Akron City - Akron, Summit" is searched as "Akron City". */
+export async function lookupAccountScore(school: string, stateCode?: string, domain?: string, timeoutMs = config.starbridge.timeoutMs): Promise<StarbridgeResult> {
   const live = !config.mock.starbridge && Boolean(config.starbridge.apiKey);
   try {
     const out = await Promise.race([
-      fetchScore(district, stateCode, domain),
-      new Promise<null>((r) => setTimeout(() => r(null), config.starbridge.timeoutMs)),
+      fetchScore(schoolName(school), stateCode, domain),
+      new Promise<null>((r) => setTimeout(() => r(null), timeoutMs)),
     ]);
     if (out === null) return { source: "timeout" };
     return { ...out, source: live ? "starbridge" : "stub" };
   } catch {
     return { source: "error" };
   }
+}
+
+// Starbridge's district search takes 4-7 seconds. The test page warms this cache when the lead picks their
+// district (api/warm.ts), so by the time they submit, the answer is usually already here.
+const CACHE_TTL_SEC = 24 * 60 * 60;
+
+/** Keyed on the form's exact school value plus the email domain, the two things known before submit. */
+export function starbridgeKey(school: string, domain?: string): string {
+  return ["sb", school.trim().toLowerCase(), domain ?? ""].join("|");
+}
+
+/** lookupAccountScore with a day-long cache. Timeouts and errors aren't kept, so the next lead tries again. */
+export async function cachedAccountScore(store: Store, school: string, stateCode?: string, domain?: string, timeoutMs?: number): Promise<StarbridgeResult> {
+  const key = starbridgeKey(school, domain);
+  try {
+    const hit = await store.get(key);
+    if (hit) return JSON.parse(hit) as StarbridgeResult;
+  } catch { /* cache trouble never blocks a lead */ }
+  const out = await lookupAccountScore(school, stateCode, domain, timeoutMs);
+  if (out.source === "starbridge" || out.source === "stub") {
+    try { await store.set(key, JSON.stringify(out), CACHE_TTL_SEC); } catch { /* ignore */ }
+  }
+  return out;
 }
 
 /** One-line summary for Slack and the scoring prompt. */

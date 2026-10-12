@@ -69,9 +69,9 @@ describe("handleSubmission (mock mode)", () => {
     expect(listOutbox()[0].draft).toBeUndefined();
   });
 
-  it("math coordinator at a hot district adopting soon is still a Discovery, never a First Touch", async () => {
+  it("math coordinator at a hot, sizable district adopting soon goes straight to the GM (fast lane)", async () => {
     const out = await handleSubmission({ ...base, job_title: "Math / STEM Coordinator", school: "Lakeview County Schools", adoption_timeline: "SY26-27" }, deps());
-    expect(out.body.level).toBe(2);
+    expect(out.body).toMatchObject({ level: 3, route: "gm" });
   });
 
   it("NYC teacher is asked to loop in their principal or AP", async () => {

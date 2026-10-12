@@ -6,11 +6,11 @@ import { config } from "./config";
 import { decideOnce, decisionKey, defaultStore, DECISION_TTL_SEC, FALLBACK_TTL_SEC, type Store } from "./decisions";
 import { addToOutbox } from "./outbox";
 import { applyRules, isInternalTest, meetingForLevel } from "./rules";
-import { createSalesforce, emailDomain, schoolName, type SalesforceClient } from "./salesforce";
+import { createSalesforce, emailDomain, type SalesforceClient } from "./salesforce";
 import { claudeScorer, mockScorer, scoreWithFallback, type Scorer } from "./score";
 import { claudeDrafter, draftWithFallback, mockDrafter, type Drafter } from "./sdr";
 import { buildSlackMessage, postToSlack } from "./slack";
-import { describeScore, lookupAccountScore } from "./starbridge";
+import { cachedAccountScore, describeScore } from "./starbridge";
 import { stateCode } from "./states";
 import { fromUnbounce } from "./unbounce";
 import { SubmissionSchema, type Decision, type Host, type NextStep, type ReplyDraft, type SfContext, type StarbridgeResult, type Submission, type WriteResult } from "./types";
@@ -19,7 +19,8 @@ export { embeddable };
 
 export interface Deps {
   salesforce: SalesforceClient;
-  starbridge: (district: string, stateCode?: string, domain?: string) => Promise<StarbridgeResult>;
+  /** Gets the form's school value as-is; the lookup strips the " - City, County" part. */
+  starbridge: (school: string, stateCode?: string, domain?: string) => Promise<StarbridgeResult>;
   scorer: Scorer;
   drafter: Drafter;
   slack: (text: string) => Promise<void>;
@@ -29,14 +30,15 @@ export interface Deps {
 }
 
 export function defaultDeps(): Deps {
+  const store = defaultStore();
   return {
     salesforce: createSalesforce(),
-    starbridge: lookupAccountScore,
+    starbridge: (school, stateCode, domain) => cachedAccountScore(store, school, stateCode, domain),
     scorer: config.mock.claude ? mockScorer : claudeScorer,
     drafter: config.mock.claude ? mockDrafter : claudeDrafter,
     slack: postToSlack,
     routing: loadRoutingTables,
-    store: defaultStore(),
+    store,
   };
 }
 
@@ -83,7 +85,7 @@ export async function decide(sub: Submission, deps: Deps): Promise<Decided> {
     errors.push(`salesforce_lookup: ${msg(err)}`);
     return { matchedBy: "none" };
   });
-  const starbridge = (code?: string) => time("starbridge", () => deps.starbridge(schoolName(sub.school), code, emailDomain(sub.email)));
+  const starbridge = (code?: string) => time("starbridge", () => deps.starbridge(sub.school, code, emailDomain(sub.email)));
 
   // Starbridge needs the state to pick the right district. When the form has it, both lookups run at once
   // (Starbridge alone can take 5+ seconds); otherwise Starbridge waits for the "(City, ST)" on the Salesforce district.
@@ -95,7 +97,7 @@ export async function decide(sub: Submission, deps: Deps): Promise<Decided> {
         return [sf, await starbridge(district?.match(/,\s*([A-Z]{2})\)\s*$/)?.[1])] as const;
       });
 
-  const ruled = applyRules(sub, sf);
+  const ruled = applyRules(sub, sf, sb);
   const decision: Decision = ruled ? { ...ruled, meeting: ruled.route === "owner" ? undefined : meetingForLevel(ruled.level) } : await time("scoring", () => scoreWithFallback(deps.scorer, sub, sf, sb));
 
   const state = resolveState(sub, sf, sb);
@@ -159,7 +161,7 @@ export async function handleSubmission(raw: unknown, deps: Deps = defaultDeps())
       // Levels 0 and 1 need no sales action, and each post costs a BDR a read.
       if (decision.level >= 2) {
         try {
-          await time("slack", () => deps.slack(buildSlackMessage(sub, sf, sb, decision, next, { host, write, draft })));
+          await time("slack", () => deps.slack(buildSlackMessage(sub, sf, sb, decision, next, { host, state: decided.state, write, draft })));
         } catch (err) {
           errors.push(`slack: ${msg(err)}`);
         }

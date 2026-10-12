@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applyRules } from "../lib/rules";
-import { SubmissionSchema } from "../lib/types";
+import { SubmissionSchema, type SfContext, type StarbridgeResult } from "../lib/types";
 
 const sub = (over: Record<string, unknown> = {}) =>
   SubmissionSchema.parse({ name: "A", surname: "B", email: "a@b.org", job_title: "Teacher", school: "X", ...over });
@@ -23,5 +23,33 @@ describe("applyRules", () => {
 
   it("leaves everyone else to Claude", () => {
     expect(applyRules(sub({ job_title: "Principal" }), { matchedBy: "none" })).toBeNull();
+  });
+});
+
+describe("GM fast lane", () => {
+  const hot = (over: Partial<NonNullable<StarbridgeResult["account"]>> = {}): StarbridgeResult => ({
+    source: "starbridge",
+    account: { score: 84, fitBand: "Moderate", signalBand: "Hot", competitors: [], enrollment: 19986, ...over },
+  });
+  const none: SfContext = { matchedBy: "none" };
+
+  it("sends anyone who isn't a teacher or coach at a hot, sizable district adopting soon to the GM", () => {
+    for (const job_title of ["Curriculum Director", "Math / STEM Coordinator", "District Administrator", "Director of Early Childhood Education", "Principal"]) {
+      expect(applyRules(sub({ job_title, adoption_timeline: "SY27-28" }), none, hot()), job_title).toMatchObject({ level: 3, route: "gm", source: "rules" });
+    }
+  });
+
+  it("leaves teachers and coaches to Claude, even at a hot district", () => {
+    for (const job_title of ["Teacher", "Instructional Coach", "Math TOSA"]) {
+      expect(applyRules(sub({ job_title, adoption_timeline: "SY26-27" }), none, hot()), job_title).toBeNull();
+    }
+  });
+
+  it("needs all three: Hot, 5,000+ students, adopting SY26-27 or SY27-28", () => {
+    const director = (adoption_timeline: string) => sub({ job_title: "Curriculum Director", adoption_timeline });
+    expect(applyRules(director("SY26-27"), none, hot({ signalBand: "Warm" }))).toBeNull();
+    expect(applyRules(director("SY26-27"), none, hot({ enrollment: 1200 }))).toBeNull();
+    expect(applyRules(director("SY28-29 or later"), none, hot())).toBeNull();
+    expect(applyRules(director("SY26-27"), none, { source: "timeout" })).toBeNull();
   });
 });

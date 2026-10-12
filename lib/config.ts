@@ -102,6 +102,7 @@ export const rulesConfig = {
     "Principal", // decision maker for a single building (NYC schools buy at building level)
   ],
   championRoles: [
+    "Director of Early Childhood Education",
     "Math / STEM Director",
     "Math Director",
     "Math / STEM Coordinator",
@@ -111,6 +112,13 @@ export const rulesConfig = {
     "Director of Special Education",
     "Vice Principal",
   ],
+  // GM fast lane: anyone who isn't an end user goes straight to a First Touch when the district is
+  // hot, sizable and adopting soon. Everything else is scored by Claude with prompts/rubric.md.
+  firstTouch: {
+    signalBands: ["Hot"], // Starbridge signal band
+    minEnrollment: 5000, // "sizable": Starbridge total enrollment
+    adoptionTimelines: ["SY26-27", "SY27-28"], // the form's adoption answer
+  },
   endUserRoles: [
     "Teacher",
     "Assistant / Special Ed Teacher",

@@ -6,6 +6,8 @@
     ("Akron Public Schools" is stored as "Akron City", "Plainfield … 202" as "Plainfield SD 202")
   - only results containing every meaningful word, districts before individual schools
   - "Use: <what they typed>" is always offered, so nobody is blocked
+  - once they pick a district, it asks the router to look it up in Starbridge right away, so the
+    decision at submit doesn't wait 4-7 seconds for it (api/warm)
 -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
@@ -15,6 +17,7 @@ $(document).ready(function () {
   const country = document.querySelector("#country");
 
   const API_ENDPOINT = "https://hook.eu1.make.celonis.com/jcdmqrvtso2bw8m5uc6qak988y86qzup";
+  const WARM_URL = "https://inbound-flow.vercel.app/api/warm";
   const DEBOUNCE_DELAY = 500;
   let searchTimeout;
   let searchRun = 0; // only the latest search may fill the list
@@ -40,6 +43,17 @@ $(document).ready(function () {
       .filter((it) => !seen.has(it.value) && seen.add(it.value))
       .sort((a, b) => kind(a.value) - kind(b.value) || String(a.value).localeCompare(String(b.value)))
       .slice(0, 10);
+  }
+
+  // Fire and forget: look the district up in Starbridge while they finish the form.
+  let lastWarmed = "";
+  function warm(school) {
+    if (!school || school === lastWarmed) return;
+    lastWarmed = school;
+    const email = (document.getElementById("email") || {}).value || "";
+    const state = (document.getElementById("state") || {}).value || "";
+    const q = new URLSearchParams({ school: school, email: email, state: state });
+    fetch(WARM_URL + "?" + q.toString(), { mode: "no-cors", keepalive: true }).catch(function () {});
   }
 
   function api(term, selectedCountry) {
@@ -140,6 +154,7 @@ $(document).ready(function () {
     $searchInput.val($(this).attr("data-value"));
     $dropdown.val($(this).attr("data-id")); // the hidden field Unbounce submits
     $list.hide();
+    warm($dropdown.val());
   });
 
   $(document).on("click", function (e) {
@@ -151,6 +166,7 @@ $(document).ready(function () {
     setTimeout(() => {
       const currentValue = $(this).val();
       if (currentValue && !$dropdown.val()) $dropdown.val(currentValue);
+      warm($dropdown.val());
     }, 200);
   });
 });
