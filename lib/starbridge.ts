@@ -154,7 +154,7 @@ export async function cachedAccountScore(store: Store, school: string, stateCode
   return out;
 }
 
-/** One-line summary for Slack and the scoring prompt. */
+/** One-line summary for Slack. Competitors stay out (the team asked); Claude still sees them in the scoring input. */
 export function describeScore(sb: StarbridgeResult): string {
   const a = sb.account;
   if (!a) {
@@ -165,7 +165,6 @@ export function describeScore(sb: StarbridgeResult): string {
     a.enrollment && `${a.enrollment.toLocaleString("en-US")} students`,
     a.mathProficiencyPct !== undefined && `${a.mathProficiencyPct}% math proficient`,
     a.propensityToSpend && `spend: ${a.propensityToSpend}`,
-    a.competitors.length && `competitors: ${a.competitors.join(", ")}`,
   ].filter(Boolean);
   return `Account Score ${a.score}/100 · Fit ${a.fitBand} · Signals ${a.signalBand}${facts.length ? ` · ${facts.join(" · ")}` : ""}`;
 }
