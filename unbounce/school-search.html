@@ -1,0 +1,157 @@
+<!--
+  School district search for the Unbounce test page (request-samples-2). Replaces the page's original
+  dropdown script; paste into Javascripts → placement "Before Body End Tag".
+  Same search endpoint (a Make scenario that only reads), smarter matching:
+  - the full text first; if that finds nothing, each meaningful word, keeping the narrowest list
+    ("Akron Public Schools" is stored as "Akron City", "Plainfield … 202" as "Plainfield SD 202")
+  - only results containing every meaningful word, districts before individual schools
+  - "Use: <what they typed>" is always offered, so nobody is blocked
+-->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function () {
+  const $dropdown = $("#school");
+  const $dropdownContainer = $dropdown.closest(".lp-pom-form-field");
+  const country = document.querySelector("#country");
+
+  const API_ENDPOINT = "https://hook.eu1.make.celonis.com/jcdmqrvtso2bw8m5uc6qak988y86qzup";
+  const DEBOUNCE_DELAY = 500;
+  let searchTimeout;
+  let searchRun = 0; // only the latest search may fill the list
+
+  // Words that don't tell districts apart ("Akron Public Schools" → akron).
+  const GENERIC = new Set(["the", "of", "and", "public", "schools", "school", "district", "districts", "consolidated",
+    "unified", "independent", "community", "comm", "county", "sd", "usd", "isd", "cusd", "no"]);
+  const words = (q) => q.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w && !GENERIC.has(w));
+
+  // 0 = district, 1 = unclear, 2 = a single school. Looks only at the name, not the " - City, County" part.
+  function kind(value) {
+    const name = String(value).split(" - ")[0];
+    if (/\b(district|sd|usd|isd|cusd|public schools|schools|city|unified|union|regional|parish|consolidated|no\.)\b/i.test(name)) return 0;
+    if (/\b(school|elementary|middle|high|academy|el sch|sch|ctr|center|charter|prep|montessori)\b/i.test(name)) return 2;
+    return 1;
+  }
+
+  function rank(query, items) {
+    const need = words(query);
+    const seen = new Set();
+    return items
+      .filter((it) => it && it.value && need.every((w) => String(it.value).toLowerCase().includes(w)))
+      .filter((it) => !seen.has(it.value) && seen.add(it.value))
+      .sort((a, b) => kind(a.value) - kind(b.value) || String(a.value).localeCompare(String(b.value)))
+      .slice(0, 10);
+  }
+
+  function api(term, selectedCountry) {
+    const url = `${API_ENDPOINT}?country=${encodeURIComponent(selectedCountry)}&search=${encodeURIComponent(term)}`;
+    return $.ajax({ url: url, method: "GET", dataType: "json" }).then((data) => (Array.isArray(data) ? data : []));
+  }
+
+  // The full text first. If it finds nothing, try each meaningful word and keep the narrowest list:
+  // the endpoint stops at 150 results, so a broad word can cut off the right district.
+  async function find(query, selectedCountry) {
+    const full = await api(query, selectedCountry);
+    if (full.length) {
+      const ranked = rank(query, full);
+      return ranked.length ? ranked : full.slice(0, 10);
+    }
+    const terms = words(query).filter((w) => w.length >= 3 && /[a-z]/.test(w)).slice(0, 4);
+    const lists = await Promise.all(terms.map((t) => api(t, selectedCountry).catch(() => [])));
+    const best = lists
+      .map((list) => ({ size: list.length, items: rank(query, list) }))
+      .filter((x) => x.items.length)
+      .sort((a, b) => a.size - b.size)[0];
+    return best ? best.items : [];
+  }
+
+  $dropdown.hide();
+  $dropdownContainer.append(`
+    <input type="text" id="schoolSearch"
+           placeholder="Find Your School District"
+           autocomplete="off"
+           class="ub-input-item single text form_elem_school">
+    <div style="position: relative;">
+      <ul id="schoolList" style="display: none;"></ul>
+    </div>
+  `);
+
+  const $searchInput = $("#schoolSearch");
+  const $list = $("#schoolList");
+
+  $list.on("mouseenter", "li", function () {
+    if (!$(this).hasClass("loading")) $(this).css("background-color", "#f0f0f0");
+  }).on("mouseleave", "li", function () {
+    if (!$(this).hasClass("loading")) $(this).css("background-color", "#fff");
+  });
+
+  function option(id, value, extraStyle) {
+    // .attr/.text keep district names with quotes or < > from breaking the list.
+    return $("<li>").attr("data-id", id).attr("data-value", value).text(value)
+      .attr("style", "padding: 10px 12px; cursor: pointer;" + (extraStyle || ""));
+  }
+
+  function searchSchools(searchQuery, selectedCountry) {
+    const run = ++searchRun;
+    $list.empty().append(`<li class="loading" style="padding: 10px 12px; color: #666; cursor: default;">Searching...</li>`).show();
+
+    find(searchQuery, selectedCountry).then(function (items) {
+      if (run !== searchRun) return;
+      $list.empty();
+      items.forEach((item) => $list.append(option(item.id, item.value)));
+      // Always offer what they typed, so a district missing from the list never blocks the form.
+      $list.append(option(searchQuery, searchQuery, " font-style: italic; color: #666;").text(`Use: "${searchQuery}"`));
+      $list.show();
+    }).catch(function (error) {
+      if (run !== searchRun) return;
+      console.error("Error searching schools:", error);
+      $list.empty().append(`<li class="error" style="padding: 10px 12px; color: #d32f2f; cursor: default;">Error loading results. Try again.</li>`).show();
+    });
+  }
+
+  $searchInput.on("input", function () {
+    const query = $(this).val().trim();
+    const selectedCountry = country.value;
+    clearTimeout(searchTimeout);
+    $dropdown.val(""); // typing again clears an earlier pick
+
+    if (query.length < 3) {
+      searchRun++;
+      $list.empty().hide();
+      return;
+    }
+    if (!selectedCountry) {
+      $list.empty().append(`<li style="padding: 10px 12px; color: #d32f2f; cursor: default;">Please select a country first</li>`).show();
+      return;
+    }
+    $list.empty().append(`<li class="loading" style="padding: 10px 12px; color: #999; cursor: default;">Type to search...</li>`).show();
+    searchTimeout = setTimeout(function () { searchSchools(query, selectedCountry); }, DEBOUNCE_DELAY);
+  });
+
+  country.addEventListener("change", function () {
+    clearTimeout(searchTimeout);
+    searchRun++;
+    $searchInput.val("");
+    $dropdown.val("");
+    $list.empty().hide();
+  });
+
+  $list.on("click", "li", function () {
+    if ($(this).hasClass("loading") || $(this).hasClass("error")) return;
+    $searchInput.val($(this).attr("data-value"));
+    $dropdown.val($(this).attr("data-id")); // the hidden field Unbounce submits
+    $list.hide();
+  });
+
+  $(document).on("click", function (e) {
+    if (!$(e.target).closest("#schoolSearch, #schoolList").length) $list.hide();
+  });
+
+  // Free text is kept if they never pick from the list.
+  $searchInput.on("blur", function () {
+    setTimeout(() => {
+      const currentValue = $(this).val();
+      if (currentValue && !$dropdown.val()) $dropdown.val(currentValue);
+    }, 200);
+  });
+});
+</script>
