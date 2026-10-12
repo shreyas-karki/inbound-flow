@@ -128,6 +128,25 @@ describe("decideOnce", () => {
     expect(out).toEqual({ value: 7, cached: false });
   });
 
+  it("keeps each answer for as long as ttlSec says", async () => {
+    const sets: number[] = [];
+    const store = memoryStore();
+    const spy: Store = { ...store, set: async (k, v, ttl) => { sets.push(ttl); return store.set(k, v, ttl); } };
+    await decideOnce("a", async () => ({ ok: false }), spy, { ttlSec: (v) => (v.ok ? 7200 : 120) });
+    await decideOnce("b", async () => ({ ok: true }), spy, { ttlSec: (v) => (v.ok ? 7200 : 120) });
+    expect(sets).toEqual([120, 7200]);
+  });
+
+  it("a scoring failure is kept for 2 minutes, not 2 hours, so the lead gets rescored soon", async () => {
+    const sets: number[] = [];
+    const store = memoryStore();
+    const spy: Store = { ...store, set: async (k, v, ttl) => { sets.push(ttl); return store.set(k, v, ttl); } };
+    const broken: Scorer = async () => { throw new Error("Claude down"); };
+    await handleTier(SECRET, fixture("level1"), deps({ scorer: broken, store: spy }).d, SECRET);
+    await handleTier(SECRET, fixture("level2"), deps({ store: spy }).d, SECRET);
+    expect(sets).toEqual([120, 7200]);
+  });
+
   it("if the first caller never finishes, the second scores it after waiting", async () => {
     const store = memoryStore();
     await store.setNx("k|lock", "1", 30);

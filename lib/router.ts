@@ -3,7 +3,7 @@
 // decide() is shared with /api/tier (lib/tier.ts), where Make asks for the same decision and does the acting itself.
 import { embeddable, EMPTY_TABLES, loadRoutingTables, resolveHost, resolveState, type RoutingTables } from "./calendars";
 import { config } from "./config";
-import { decideOnce, decisionKey, defaultStore, type Store } from "./decisions";
+import { decideOnce, decisionKey, defaultStore, DECISION_TTL_SEC, FALLBACK_TTL_SEC, type Store } from "./decisions";
 import { addToOutbox } from "./outbox";
 import { applyRules, isInternalTest, meetingForLevel } from "./rules";
 import { createSalesforce, emailDomain, type SalesforceClient } from "./salesforce";
@@ -100,7 +100,9 @@ export async function decide(sub: Submission, deps: Deps): Promise<Decided> {
 
 /** decide(), but once per lead: the browser and Make share the first caller's answer. */
 export function decideLead(sub: Submission, deps: Deps) {
-  return decideOnce(decisionKey(sub), () => decide(sub, deps), deps.store);
+  return decideOnce(decisionKey(sub), () => decide(sub, deps), deps.store, {
+    ttlSec: (d) => (d.decision.source === "fallback" ? FALLBACK_TTL_SEC : DECISION_TTL_SEC),
+  });
 }
 
 export async function handleSubmission(raw: unknown, deps: Deps = defaultDeps()): Promise<RouterResponse> {

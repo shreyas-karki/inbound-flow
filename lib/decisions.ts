@@ -67,8 +67,10 @@ export function decisionKey(sub: Submission): string {
   return ["decision", sub.email, sub.job_title, sub.adoption_timeline].map((s) => s.trim().toLowerCase()).join("|");
 }
 
-const TTL_SEC = 2 * 60 * 60;
+export const DECISION_TTL_SEC = 2 * 60 * 60;
 const LOCK_SEC = 30;
+/** Fallback answers (scoring failed) only need to outlive the page/Make pair, not lock a lead in for hours. */
+export const FALLBACK_TTL_SEC = 2 * 60;
 
 export interface Once<T> { value: T; cached: boolean }
 
@@ -76,7 +78,7 @@ export async function decideOnce<T>(
   key: string,
   compute: () => Promise<T>,
   store: Store = defaultStore(),
-  { waitMs = 8000, pollMs = 300 } = {},
+  { waitMs = 8000, pollMs = 300, ttlSec = (_value: T) => DECISION_TTL_SEC } = {},
 ): Promise<Once<T>> {
   // Redis trouble never blocks a lead: every store call can fail and we just score.
   const safe = async <R>(fn: () => Promise<R>, fallback: R): Promise<R> => {
@@ -87,7 +89,7 @@ export async function decideOnce<T>(
     return hit ? (JSON.parse(hit) as T) : undefined;
   };
   const save = async (value: T) => {
-    await safe(() => store.set(key, JSON.stringify(value), TTL_SEC), undefined);
+    await safe(() => store.set(key, JSON.stringify(value), ttlSec(value)), undefined);
     return { value, cached: false };
   };
 
