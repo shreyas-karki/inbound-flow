@@ -67,6 +67,18 @@ describe("/api/tier", () => {
     }
   });
 
+  it("passes the form's state to Starbridge, and reports errors and timings", async () => {
+    const codes: (string | undefined)[] = [];
+    const broken = { lookup: async () => { throw new Error("Salesforce auth failed"); }, upsertContact: async () => ({ action: "skipped" as const }) };
+    const out = await handleTier(SECRET, fixture("level2"), deps({
+      salesforce: broken,
+      starbridge: async (district, code) => { codes.push(code); return lookupAccountScore(district, code); },
+    }).d, SECRET);
+    expect(codes).toEqual(["NY"]);
+    expect(out.body.errors).toEqual(["salesforce_lookup: Salesforce auth failed"]);
+    expect(out.body.timings).toHaveProperty("starbridge");
+  });
+
   it("Level 3 says who else to add to the call", async () => {
     const out = await handleTier(SECRET, fixture("level3"), deps().d, SECRET);
     expect(out.body).toMatchObject({ also_add: "Neha", host_user_id: IDS.melina, decision_maker: true });

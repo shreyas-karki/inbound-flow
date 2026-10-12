@@ -39,7 +39,8 @@ export const config = {
 
   starbridge: {
     apiKey: env("STARBRIDGE_API_KEY"),
-    timeoutMs: Number(env("STARBRIDGE_TIMEOUT_MS", "3000")),
+    // Its district search often takes 5-7 seconds. It runs alongside Salesforce when the form has a state.
+    timeoutMs: Number(env("STARBRIDGE_TIMEOUT_MS", "6000")),
   },
 
   slack: {

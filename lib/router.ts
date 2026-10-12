@@ -11,6 +11,7 @@ import { claudeScorer, mockScorer, scoreWithFallback, type Scorer } from "./scor
 import { claudeDrafter, draftWithFallback, mockDrafter, type Drafter } from "./sdr";
 import { buildSlackMessage, postToSlack } from "./slack";
 import { describeScore, lookupAccountScore } from "./starbridge";
+import { stateCode } from "./states";
 import { fromUnbounce } from "./unbounce";
 import { SubmissionSchema, type Decision, type Host, type NextStep, type ReplyDraft, type SfContext, type StarbridgeResult, type Submission, type WriteResult } from "./types";
 
@@ -78,17 +79,21 @@ export async function decide(sub: Submission, deps: Deps): Promise<Decided> {
   // The routing sheet loads alongside the lookups; it's cached, so this is usually instant.
   const tables = deps.routing().catch(() => EMPTY_TABLES);
 
-  let sf: SfContext = { matchedBy: "none" };
-  try {
-    sf = await time("salesforce_lookup", () => deps.salesforce.lookup(sub));
-  } catch (err) {
+  const salesforce = time("salesforce_lookup", () => deps.salesforce.lookup(sub)).catch((err): SfContext => {
     errors.push(`salesforce_lookup: ${msg(err)}`);
-  }
+    return { matchedBy: "none" };
+  });
+  const starbridge = (code?: string) => time("starbridge", () => deps.starbridge(sub.school, code, emailDomain(sub.email)));
 
-  // Salesforce district names end in "(City, ST)"; pass the state so Starbridge picks the right district.
-  const district = sf.account?.parentName ?? sf.account?.name;
-  const stateCode = district?.match(/,\s*([A-Z]{2})\)\s*$/)?.[1];
-  const sb: StarbridgeResult = await time("starbridge", () => deps.starbridge(sub.school, stateCode, emailDomain(sub.email)));
+  // Starbridge needs the state to pick the right district. When the form has it, both lookups run at once
+  // (Starbridge alone can take 5+ seconds); otherwise Starbridge waits for the "(City, ST)" on the Salesforce district.
+  const formState = stateCode(sub.state);
+  const [sf, sb] = formState
+    ? await Promise.all([salesforce, starbridge(formState)])
+    : await salesforce.then(async (sf) => {
+        const district = sf.account?.parentName ?? sf.account?.name;
+        return [sf, await starbridge(district?.match(/,\s*([A-Z]{2})\)\s*$/)?.[1])] as const;
+      });
 
   const ruled = applyRules(sub, sf);
   const decision: Decision = ruled ? { ...ruled, meeting: ruled.route === "owner" ? undefined : meetingForLevel(ruled.level) } : await time("scoring", () => scoreWithFallback(deps.scorer, sub, sf, sb));

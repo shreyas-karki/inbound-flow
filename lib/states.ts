@@ -20,3 +20,11 @@ export function stateName(input?: string | null): string | undefined {
   if (!s) return undefined;
   return US_STATES[s.toUpperCase()] ?? BY_NAME.get(s.toLowerCase());
 }
+
+const CODE_BY_NAME = new Map(Object.entries(US_STATES).map(([code, name]) => [name, code]));
+
+/** "New York" or "ny" → "NY". Anything else → undefined. */
+export function stateCode(input?: string | null): string | undefined {
+  const name = stateName(input);
+  return name ? CODE_BY_NAME.get(name) : undefined;
+}

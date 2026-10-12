@@ -29,5 +29,5 @@ for f in test/fixtures/unbounce-*.json; do
   echo "$(basename "$f" .json):"
   jq --arg run "$RUN" '.data.email[0] |= sub("@"; "+" + $run + "@")' "$f" \
   | curl -s -X POST "$BASE/api/tier" -H "Content-Type: application/json" ${BYPASS[@]+"${BYPASS[@]}"} -H "x-inbound-secret: $SECRET" --data @- \
-    | jq -c 'if .level == null then {error} else {level, route, host_name, also_add, booking_url, state, fallback, cached, reason} end' | sed 's/^/  /'
+    | jq -c 'if .level == null then {error} else {level, route, host_name, also_add, booking_url, state, fallback, cached, starbridge: .starbridge_summary, salesforce: .sf_match, errors, ms: .timings, reason} end' | sed 's/^/  /'
 done

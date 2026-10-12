@@ -81,6 +81,9 @@ export function tierBody(sub: Submission, d: Decided, cached: boolean): Record<s
     open_opp_id: sf.openOpportunity?.id ?? null,
     slack_text: buildSlackMessage(sub, sf, sb, decision, next, { host }),
     cached,
+    // What went wrong along the way (e.g. a Salesforce login failure), and how long each step took, in ms.
+    errors: d.errors,
+    timings: d.timings,
   };
 }
 
@@ -93,7 +96,7 @@ function fallback(sub: Submission | undefined, reason: string): Record<string, u
     starbridge_score: null, starbridge_fit: null, starbridge_signal: null, starbridge_summary: null,
     sf_contact_id: null, sf_account_id: null, sf_match: "none", open_opp_id: null,
     slack_text: `:warning: *Level 2 by default* · ${who}\n_${reason}_`,
-    cached: false,
+    cached: false, errors: [reason], timings: {},
   };
 }
 

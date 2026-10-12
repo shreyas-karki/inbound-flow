@@ -1,0 +1,12 @@
+{
+  "data": {
+    "first_name": ["Riley"], "last_name": ["Realdistrict"], "email": ["riley.realdistrict@example.org"], "phone_number": ["5555550105"],
+    "user_profile": ["Math / STEM Coordinator"], "school": ["Port Chester-Rye Union Free School District"], "state": ["New York"],
+    "country": ["United States of America"],
+    "when_is_your_district_planning_to_adopt_a_new_math_curriculum": ["SY27-28"],
+    "message": ["Looking at K-5 options for next year."],
+    "utm_source": ["google"], "utm_campaign": ["samples-test"]
+  },
+  "page_url": "https://forms.innovamat.com/request-samples-b/",
+  "page_name": "Request Samples (test)"
+}
