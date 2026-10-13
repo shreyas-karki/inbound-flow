@@ -45,7 +45,7 @@ We run both arms side by side (the A/B test agreed with Maria on Oct 8) and comp
 - [x] Make connector working in Claude Code. Claude can read 172177 and build new scenarios, so you don't need to export blueprints.
 - [x] **Test scenario built (Oct 12), switched off:** "US Physical Samples — Tiered (test)", scenario 262495, in the same folder as 172177. Its new webhook is `https://hook.eu1.make.celonis.com/bs7lmzl41libq3hkdcqrshvr1d1fba5e`. 172177 was not touched.
 - [x] Calendly code removed. The page shows Google appointment calendars.
-- [x] First Touch owners by state, from Manuel (Oct 12). See below. 📌 **Three questions still open.**
+- [x] First Touch owners by state, from Manuel (Oct 12), in the `ft_owners` tab. See below.
 - [x] The app's side of the test (Oct 12): `/api/tier` for Make, decide-once, routing from the sheet, form-field fixes, tests. See README, "Tiered test".
 - [ ] **Booking links.** `calendar_links` already has working links for **Manuel Méndez, Melina Gruber, Rob Baier and Eric Fontana** (his short link works, since the app expands short links). **Still missing:** Luis, Neftali, Neha, Arnau Marli, JT, Larry. Until someone has a link, their leads see "someone will reach out within one business day", and the Slack alert still goes out right away.
 - [ ] **Mobile numbers** for texts to reps. Not available yet.
@@ -53,9 +53,7 @@ We run both arms side by side (the A/B test agreed with Maria on Oct 8) and comp
 
 ## Who runs First Touches
 
-> 📌 **ON HOLD: waiting on Manuel.** Don't build the `ft_owners` tab until the three questions at the end of this section are answered.
-> The code is ready for it. Until the tab exists, Level 3 leads fall back to `GM_NAME` / `GM_BOOKING_URL` in Vercel, or to "someone will reach out" when that isn't set.
-> When the answers come in: fill the tab (Step 2), publish it (Step 3), and remove this notice.
+> ✅ **Built (Oct 12):** the `ft_owners` tab now has this list, with Salesforce user IDs (JT = Jose Tomas Hidalgo, Larry = Larry Dang, Neha = Neha Rao, Arnau Marli = Arnau Marlí, Chenoa = Chenoa Minkley, Manu = Manuel Méndez). New Jersey books on JT with Larry added. Charter/private schools are listed but not used by the app yet. To switch it on: publish the tab as CSV and set `SHEET_FT_OWNERS_CSV_URL` in Vercel.
 
 From Manuel Méndez, Oct 12. **The rule for every First Touch (Level 3): one owner per state.** The owner is on the call and decides who runs it. The "also add" person joins the call too.
 
