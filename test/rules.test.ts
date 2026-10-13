@@ -33,14 +33,14 @@ describe("GM fast lane", () => {
   });
   const none: SfContext = { matchedBy: "none" };
 
-  it("sends anyone who isn't a teacher or coach at a hot, sizable district adopting soon to the GM", () => {
-    for (const job_title of ["Curriculum Director", "Math / STEM Coordinator", "District Administrator", "Director of Early Childhood Education", "Principal"]) {
+  it("sends anyone who isn't a teacher at a hot, sizable district adopting soon to the GM", () => {
+    for (const job_title of ["Curriculum Director", "Math / STEM Coordinator", "District Administrator", "Director of Early Childhood Education", "Principal", "Instructional Coach", "Math TOSA"]) {
       expect(applyRules(sub({ job_title, adoption_timeline: "SY27-28" }), none, hot()), job_title).toMatchObject({ level: 3, route: "gm", source: "rules" });
     }
   });
 
-  it("leaves teachers and coaches to Claude, even at a hot district", () => {
-    for (const job_title of ["Teacher", "Instructional Coach", "Math TOSA"]) {
+  it("leaves teachers to Claude, even at a hot district", () => {
+    for (const job_title of ["Teacher", "Interventionist", "Other"]) {
       expect(applyRules(sub({ job_title, adoption_timeline: "SY26-27" }), none, hot()), job_title).toBeNull();
     }
   });

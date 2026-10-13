@@ -60,7 +60,8 @@ The first thing we need from any lead is the WHY NOW: why this district would ch
 
 ## Tie-breakers
 - An `end_user` reaches Level 3 only through committee membership or leading the review, stated in their message. A hot district or adopting soon alone keeps them at Level 2.
-- Decision maker or champion, torn between 2 and 3: pick 3.
+- A `coach` reaches Level 3 through a hot district or committee membership. Adopting soon alone keeps them at Level 2. Level 0 signals still apply (high-school only, job seeker, vendor).
+- Decision maker, champion or coach, torn between 2 and 3: pick 3.
 - End user, torn between 1 and 2: pick 1, unless there is an evaluation signal or a hot district.
 - Don't invent facts. Base the reason only on the data provided.
 - Keep the reason under 25 words and name the deciding factor, for example: "Principal of a single-school district searching for a new curriculum and asking to pilot: First Touch."

@@ -41,8 +41,13 @@ describe("handleSubmission (mock mode)", () => {
     expect(draft?.gmailUrl).toContain("mail.google.com");
   });
 
-  it("instructional coach at a hot district → Level 2 Discovery", async () => {
+  it("instructional coach at a hot district, no adoption date → Level 3 First Touch", async () => {
     const out = await handleSubmission({ ...base, job_title: "Instructional Coach", school: "Lakeview County Schools" }, deps());
+    expect(out.body).toMatchObject({ level: 3, route: "gm" });
+  });
+
+  it("TOSA with no signal still books a Discovery (Level 2), unlike a teacher", async () => {
+    const out = await handleSubmission({ ...base, job_title: "Math TOSA", school: "Riverside Unified", needs: "ideas for fractions" }, deps());
     expect(out.body.level).toBe(2);
   });
 

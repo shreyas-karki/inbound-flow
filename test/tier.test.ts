@@ -51,7 +51,7 @@ describe("/api/tier", () => {
     });
     expect(out.body.slack_text).toContain("Level 2");
     expect(out.body.slack_text).toContain("shown *Luis Acevedo*'s calendar");
-    expect(out.body.slack_text).toContain(":pencil2: Name: Casey Coach");
+    expect(out.body.slack_text).toContain(":pencil2: Name: Casey Teacher");
     expect(out.body.slack_header).toContain("*Level 2 · Discovery*");
     expect(out.body.slack_header).not.toContain(":pencil2:");
   });
@@ -108,7 +108,7 @@ describe("/api/tier", () => {
 
   it("the page and Make share one decision: one scoring call, same level", async () => {
     const { d, calls } = deps();
-    const f = fixture("level2"); // an end user, so Claude scores it (the GM fast lane doesn't)
+    const f = fixture("level2"); // a teacher, so Claude scores it (the GM fast lane doesn't)
     const page = await handleSubmission({ ...f.data, page_url: f.page_url }, d);
     await page.background;
     const make = await handleTier(SECRET, f, d, SECRET);

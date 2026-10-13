@@ -23,20 +23,21 @@ Anyone who will never buy a district curriculum.
 
 ## Level 1: Long shot
 A real K-8 educator with no buying power and no stated reason to switch now.
-- Teachers, coaches, interventionists and TOSAs whose message shows no evaluation, review or pilot
+- Teachers and interventionists whose message shows no evaluation, review or pilot (coaches and TOSAs never land here)
 - At a district that is not Hot or Warm in Starbridge
 - Unknown or "Other" roles with no message to place them
 
 Replies go to the BDR inbox. A reply that names a decision maker or describes a review re-scores the lead.
 
-**Why:** 0 of 5 meetings held with teachers or coaches who gave no evaluation signal advanced. A teacher's answer to the adoption question is not reliable on its own.
+**Why:** 0 of 5 meetings held with teachers who gave no evaluation signal advanced. A teacher's answer to the adoption question is not reliable on its own.
 
 ## Level 2: Discovery
 A real chance where we don't yet have the decision maker or the WHY NOW, so a BDR goes and gets them.
 - Champions without an active review: math/STEM director or coordinator, curriculum coordinator, MTSS coordinator, Title I director, SpEd director, assistant principal
 - Decision makers with no WHY NOW at a district that isn't Hot or Warm
 - Principals outside NYC who lead one building of a larger district, unless they have a WHY NOW
-- Teachers and coaches who write that their school is evaluating, previewing, piloting or reviewing, or whose district is Hot or Warm
+- Instructional coaches, math coaches and TOSAs, even with no signal: they can always book a BDR call
+- Teachers who write that their school is evaluating, previewing, piloting or reviewing, or whose district is Hot or Warm
 
 The call has two goals: the decision maker's name and the WHY NOW. With both, the BDR books a First Touch with the growth manager.
 
@@ -51,6 +52,8 @@ The person who signs, or the person running the review, with a reason to change 
   - a message saying they are searching, reviewing, piloting, or asking for pricing
   - met us in person (Lunch & Learn, PD, conference)
 - Champions running an active review, such as a math coordinator who writes "we're starting a 6-8 review"
+- Instructional coaches, math coaches and TOSAs at a Hot or Warm district (or score 70+), with or without an adoption date. At a Hot district of 5,000+ students adopting SY26-27/27-28 they skip Claude and go straight to the GM
+- Anyone, including a teacher, whose message says they sit on the curriculum, adoption or pilot committee, or lead the review
 - Principals who decide for their whole school: NYC principals, and principals of a single-school district, charter or private school
 
 If no meeting is booked within 48 hours, the growth manager follows up personally.
@@ -63,15 +66,16 @@ The free-text message is the strongest signal, so it can override the role dropd
 | Signal | Effect |
 |---|---|
 | Message says evaluating, previewing, reviewing, searching, piloting, or asks for pricing | WHY NOW. Teacher or coach → Level 2; decision maker or champion → Level 3 |
+| Coach or TOSA at a Hot or Warm district | Level 3 |
 | Message shows a student, parent, vendor or nonsense | Level 0, whatever role was picked |
-| Adoption answer SY26-27 / SY27-28 | Counts only from decision makers and champions. A teacher's answer needs a second signal |
+| Adoption answer SY26-27 / SY27-28 | Counts only from decision makers and champions. A teacher's or coach's answer needs a second signal |
 | 2+ people from the same district within 30 days | Up one level |
 | Met us in person (Lunch & Learn, PD, conference) | Up one level; end users still cap at Level 2 |
 | Starbridge Blocked, or the district just committed to another core program | Down one level |
 | Form role and Salesforce role disagree | Use the more senior one, and flag it for cleanup |
 
-- Never put an end user at Level 3.
-- Decision maker, torn between 2 and 3 → 3.
+- Teachers reach Level 3 only through committee membership or leading the review. Coaches and TOSAs also reach it through a hot district.
+- Decision maker, champion or coach, torn between 2 and 3 → 3.
 - End user, torn between 1 and 2 → 1, unless there is an evaluation signal or a hot district.
 - Every decision carries a one-line reason under 25 words naming the deciding factor.
 

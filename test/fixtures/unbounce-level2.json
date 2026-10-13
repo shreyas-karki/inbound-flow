@@ -1,7 +1,7 @@
 {
   "data": {
-    "first_name": ["Casey"], "last_name": ["Coach"], "email": ["casey.coach@example.org"], "phone_number": ["5555550102"],
-    "user_profile": ["Instructional Coach"], "school": ["Lakeview County Schools"], "state": ["New York"],
+    "first_name": ["Casey"], "last_name": ["Teacher"], "email": ["casey.teacher@example.org"], "phone_number": ["5555550102"],
+    "user_profile": ["Teacher"], "school": ["Lakeview County Schools"], "state": ["New York"],
     "country": ["United States of America"],
     "when_is_your_district_planning_to_adopt_a_new_math_curriculum": ["SY27-28"],
     "message": ["Our math team is starting to look at new programs."],
