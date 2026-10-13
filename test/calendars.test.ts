@@ -91,6 +91,11 @@ describe("expandShortLink", () => {
     expect(await expandShortLink("https://calendar.app.google/abc", fetcher)).toBe("https://calendar.google.com/appointments/schedules/AcZFull");
   });
 
+  it("also accepts a short link that opens a booking page with several schedules", async () => {
+    const fetcher = (async () => new Response(null, { status: 302, headers: { location: "https://calendar.google.com/calendar/appointments/AcZssZ3P8iz=" } })) as typeof fetch;
+    expect(await expandShortLink("https://calendar.app.google/neha", fetcher)).toBe("https://calendar.google.com/calendar/appointments/AcZssZ3P8iz=");
+  });
+
   it("drops a short link that doesn't resolve, and leaves full links alone", async () => {
     const fail = (async () => { throw new Error("offline"); }) as typeof fetch;
     expect(await expandShortLink("https://calendar.app.google/abc", fail)).toBeUndefined();

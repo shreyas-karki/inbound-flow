@@ -110,6 +110,8 @@ describe("embeddable", () => {
     // The sheet's variants: signed-in /u/0/ links and links without /calendar/.
     expect(embeddable("https://calendar.google.com/calendar/u/0/appointments/schedules/AcZ")).toBe("https://calendar.google.com/calendar/appointments/schedules/AcZ?gv=true");
     expect(embeddable("https://calendar.google.com/appointments/schedules/AcZ")).toBe("https://calendar.google.com/calendar/appointments/schedules/AcZ?gv=true");
+    // A booking page listing several schedules (what Neha's short link opens).
+    expect(embeddable("https://calendar.google.com/calendar/appointments/AcZssZ3P8iz-Dy6Y=")).toBe("https://calendar.google.com/calendar/appointments/AcZssZ3P8iz-Dy6Y=?gv=true");
     expect(embeddable("https://example.com/book")).toBe("https://example.com/book");
   });
 });

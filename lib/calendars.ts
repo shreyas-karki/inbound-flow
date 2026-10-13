@@ -80,11 +80,15 @@ function sameName(a: string, b: string): boolean {
 
 /**
  * Google appointment pages only load in an iframe as calendar.google.com/calendar/appointments/schedules/<id>?gv=true.
- * The sheet has variants with /u/0/ or without /calendar/; anything that isn't a Google schedule passes through.
+ * The sheet has variants with /u/0/ or without /calendar/. A booking page that lists several of someone's schedules
+ * (calendar.google.com/calendar/appointments/<id>=) embeds the same way. Anything else passes through.
  */
 export function embeddable(url: string): string {
-  const id = url.match(/calendar\.google\.com\/(?:calendar\/)?(?:u\/\d+\/)?appointments\/schedules\/([\w-]+)/)?.[1];
-  return id ? `https://calendar.google.com/calendar/appointments/schedules/${id}?gv=true` : url;
+  const base = /calendar\.google\.com\/(?:calendar\/)?(?:u\/\d+\/)?appointments\//;
+  const schedule = url.match(new RegExp(base.source + /schedules\/([\w-]+)/.source))?.[1];
+  if (schedule) return `https://calendar.google.com/calendar/appointments/schedules/${schedule}?gv=true`;
+  const bookingPage = url.match(new RegExp(base.source + /(?!schedules\/)([\w-]+=*)/.source))?.[1];
+  return bookingPage ? `https://calendar.google.com/calendar/appointments/${bookingPage}?gv=true` : url;
 }
 
 // ---------------------------------------------------------------- loading the sheet
@@ -155,7 +159,7 @@ export async function expandShortLink(url: string, fetcher: typeof fetch = fetch
   try {
     const res = await fetcher(url, { redirect: "manual", signal: AbortSignal.timeout(3000) });
     const location = res.headers.get("location");
-    return location && /\/appointments\/schedules\//.test(location) ? location : undefined;
+    return location && /calendar\.google\.com\/.*appointments\//.test(location) ? location : undefined;
   } catch {
     return undefined;
   }
