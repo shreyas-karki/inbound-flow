@@ -112,20 +112,24 @@ export const rulesConfig = {
     "Director of Special Education",
     "Vice Principal",
   ],
-  // GM fast lane: anyone who isn't an end user goes straight to a First Touch when the district is
+  // GM fast lane: anyone who isn't a teacher goes straight to a First Touch when the district is
   // hot, sizable and adopting soon. Everything else is scored by Claude with prompts/rubric.md.
   firstTouch: {
     signalBands: ["Hot"], // Starbridge signal band
     minEnrollment: 5000, // "sizable": Starbridge total enrollment
     adoptionTimelines: ["SY26-27", "SY27-28"], // the form's adoption answer
   },
-  endUserRoles: [
-    "Teacher",
-    "Assistant / Special Ed Teacher",
-    "Interventionist",
+  // Coaches and TOSAs work across classrooms and sit close to curriculum decisions: they can always
+  // book a Discovery, and a First Touch when the district is hot.
+  coachRoles: [
     "Instructional Coach",
     "Math Coach",
     "Math / Instructional Coach",
     "Math TOSA",
+  ],
+  endUserRoles: [
+    "Teacher",
+    "Assistant / Special Ed Teacher",
+    "Interventionist",
   ],
 };

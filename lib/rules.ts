@@ -32,12 +32,12 @@ export function applyRules(sub: Submission, sf: SfContext, sb?: StarbridgeResult
     return { level: 0, route: "email", reason: `Role "${sub.job_title}" is not a buyer.`, source: "rules" };
   }
 
-  // GM fast lane: a hot, sizable district adopting soon, and anyone there who isn't a teacher or coach.
+  // GM fast lane: a hot, sizable district adopting soon, and anyone there who isn't a teacher.
   const a = sb?.account;
   const { signalBands, minEnrollment, adoptionTimelines } = rulesConfig.firstTouch;
   const group = roleGroup(sub.job_title);
   if (
-    a && (group === "decision_maker" || group === "champion") &&
+    a && group !== "end_user" && group !== "other" &&
     signalBands.includes(a.signalBand) && (a.enrollment ?? 0) >= minEnrollment &&
     adoptionTimelines.includes(sub.adoption_timeline)
   ) {
@@ -64,6 +64,7 @@ export function isDecisionMaker(role: string): boolean {
 export function roleGroup(role: string): RoleGroup {
   if (rulesConfig.decisionMakerRoles.includes(role)) return "decision_maker";
   if (rulesConfig.championRoles.includes(role)) return "champion";
+  if (rulesConfig.coachRoles.includes(role)) return "coach";
   if (rulesConfig.endUserRoles.includes(role)) return "end_user";
   return "other";
 }

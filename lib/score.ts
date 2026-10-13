@@ -85,6 +85,7 @@ export const mockScorer: Scorer = async (sub, _sf, sb) => {
   const level: Level =
     group === "decision_maker" || group === "champion" ? (why ? 3 : 2)
     : committee ? 3
+    : group === "coach" ? (isHotDistrict(sb) ? 3 : 2)
     : why ? 2 : 1;
   return { level, reason: `Mock: ${group.replace("_", " ")}${why ? " with a WHY NOW" : ", no WHY NOW yet"}.` };
 };

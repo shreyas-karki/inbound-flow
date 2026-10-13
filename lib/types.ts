@@ -71,7 +71,7 @@ export interface StarbridgeResult {
   source: "stub" | "starbridge" | "timeout" | "error";
 }
 
-export type RoleGroup = "decision_maker" | "champion" | "end_user" | "other";
+export type RoleGroup = "decision_maker" | "champion" | "coach" | "end_user" | "other";
 
 export interface Decision {
   level: Level;
