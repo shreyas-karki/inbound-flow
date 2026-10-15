@@ -119,6 +119,12 @@ export const rulesConfig = {
     minEnrollment: 5000, // "sizable": Starbridge total enrollment
     adoptionTimelines: ["SY26-27", "SY27-28"], // the form's adoption answer
   },
+  // A First Touch costs a growth manager an hour, so small or low-scoring districts get a BDR Discovery instead,
+  // whoever asks. Either one caps the lead at Level 2. No Starbridge data (timeout, no match) never caps.
+  firstTouchFloor: {
+    minScore: 50, // Starbridge account score, 0-100
+    minEnrollment: 1000, // Starbridge total enrollment
+  },
   // Coaches and TOSAs work across classrooms and sit close to curriculum decisions: they can always
   // book a Discovery, and a First Touch when the district is hot.
   coachRoles: [

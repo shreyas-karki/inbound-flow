@@ -52,6 +52,18 @@ export function applyRules(sub: Submission, sf: SfContext, sb?: StarbridgeResult
   return null;
 }
 
+/** Runs after rules and Claude: a First Touch at a small or low-scoring district becomes a BDR Discovery. */
+export function capFirstTouch(decision: Decision, sb: StarbridgeResult): Decision {
+  const a = sb.account;
+  if (decision.route !== "gm" || !a) return decision;
+  const { minScore, minEnrollment } = rulesConfig.firstTouchFloor;
+  const small = a.enrollment !== undefined && a.enrollment < minEnrollment;
+  const weak = a.score < minScore;
+  if (!small && !weak) return decision;
+  const why = [small && `${a.enrollment!.toLocaleString("en-US")} students`, weak && `Starbridge score ${a.score}`].filter(Boolean).join(", ");
+  return { ...decision, level: 2, route: "bdr", meeting: "discovery", reason: `${decision.reason} Capped at Discovery: ${why}.` };
+}
+
 /** Innovamat staff testing the form: scored like a real lead, but flagged and never written to Salesforce. */
 export function isInternalTest(email: string): boolean {
   return /@innovamat\.com$/i.test(email.trim());

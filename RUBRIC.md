@@ -56,6 +56,8 @@ The person who signs, or the person running the review, with a reason to change 
 - Anyone, including a teacher, whose message says they sit on the curriculum, adoption or pilot committee, or lead the review
 - Principals who decide for their whole school: NYC principals, and principals of a single-school district, charter or private school
 
+**Floor:** a district with a Starbridge score under 50, or under 1,000 students, never gets a First Touch. Those leads become a Level 2 Discovery with the BDR, whoever asks. Without Starbridge data the floor doesn't apply.
+
 If no meeting is booked within 48 hours, the growth manager follows up personally.
 
 **Why:** about 15 leads fit this profile in the sample and only 2 booked (Simsbury, Nenana). The rest waited 1–3 weeks in the BDR queue.

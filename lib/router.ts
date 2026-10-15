@@ -5,7 +5,7 @@ import { embeddable, EMPTY_TABLES, loadRoutingTables, resolveHost, resolveState,
 import { config } from "./config";
 import { decideOnce, decisionKey, defaultStore, DECISION_TTL_SEC, FALLBACK_TTL_SEC, type Store } from "./decisions";
 import { addToOutbox } from "./outbox";
-import { applyRules, isInternalTest, meetingForLevel } from "./rules";
+import { applyRules, capFirstTouch, isInternalTest, meetingForLevel } from "./rules";
 import { createSalesforce, emailDomain, type SalesforceClient } from "./salesforce";
 import { claudeScorer, mockScorer, scoreWithFallback, type Scorer } from "./score";
 import { claudeDrafter, draftWithFallback, mockDrafter, type Drafter } from "./sdr";
@@ -98,7 +98,7 @@ export async function decide(sub: Submission, deps: Deps): Promise<Decided> {
       });
 
   const ruled = applyRules(sub, sf, sb);
-  const decision: Decision = ruled ? { ...ruled, meeting: ruled.route === "owner" ? undefined : meetingForLevel(ruled.level) } : await time("scoring", () => scoreWithFallback(deps.scorer, sub, sf, sb));
+  const decision: Decision = capFirstTouch(ruled ? { ...ruled, meeting: ruled.route === "owner" ? undefined : meetingForLevel(ruled.level) } : await time("scoring", () => scoreWithFallback(deps.scorer, sub, sf, sb)), sb);
 
   const state = resolveState(sub, sf, sb);
   const host = resolveHost(decision, state, sf, await time("routing_sheet", () => tables));
