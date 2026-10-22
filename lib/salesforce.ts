@@ -92,7 +92,7 @@ export function schoolName(school: string): string {
 }
 
 const DISTRICT_PREFIX = "[School District]";
-const ACCOUNT_FIELDS = "Id, Name, Label__c, OwnerId, Owner.Name, ParentId, Parent.Name";
+const ACCOUNT_FIELDS = "Id, Name, Label__c, OwnerId, Owner.Name, ParentId, Parent.Name, Total_PARR__c, Parent.Total_PARR__c";
 
 /** Pick one account only when the match is unambiguous. Districts (no parent) win over schools. */
 export function pickAccount<T extends { Name: string; ParentId?: string | null }>(typed: string, accounts: T[]): T | undefined {
@@ -136,6 +136,16 @@ export function districtOf(c: ColleagueRow): string {
   if (a?.Parent?.ParentId && isDistrict(a.Parent.Parent?.Name)) return a.Parent.ParentId;
   if (a?.ParentId && isDistrict(a.Parent?.Name)) return a.ParentId;
   return c.AccountId;
+}
+
+/**
+ * Total PARR of the district a matched account belongs to: a school's parent district when it has one,
+ * otherwise the account itself. Never a non-district parent (a Texas ESC, an Illinois ROE).
+ */
+export function districtParr(a: { Name?: string; Total_PARR__c?: number | null; Parent?: { Name?: string; Total_PARR__c?: number | null } | null }): number | undefined {
+  const isDistrict = (name?: string) => Boolean(name?.startsWith(DISTRICT_PREFIX));
+  const parr = !isDistrict(a.Name) && isDistrict(a.Parent?.Name) ? a.Parent?.Total_PARR__c : a.Total_PARR__c;
+  return typeof parr === "number" ? parr : undefined;
 }
 
 /** The district most colleagues on the same email domain belong to, when they mostly agree. */
@@ -230,7 +240,8 @@ class LiveSalesforce implements SalesforceClient {
     // An internal tester's own contact record says nothing about the district they're posing as.
     const contacts = isInternalTest(sub.email) ? [] : await this.query<any>(
       `SELECT Id, Owner.Name, US_Inbound_Stage__c, Inbound_Contact_Message__c, Contact_Source__c,
-              AccountId, Account.Name, Account.Label__c, Account.OwnerId, Account.Owner.Name, Account.ParentId, Account.Parent.Name
+              AccountId, Account.Name, Account.Label__c, Account.OwnerId, Account.Owner.Name, Account.ParentId, Account.Parent.Name,
+              Account.Total_PARR__c, Account.Parent.Total_PARR__c
        FROM Contact WHERE Email = '${soqlString(sub.email)}' AND Account.Label__c != 'TEST'
        ORDER BY LastModifiedDate DESC LIMIT 5`,
     );
@@ -246,6 +257,7 @@ class LiveSalesforce implements SalesforceClient {
         ctx.account = {
           id: c.AccountId, name: c.Account?.Name, label: c.Account?.Label__c, ownerId: c.Account?.OwnerId,
           ownerName: c.Account?.Owner?.Name, parentId: c.Account?.ParentId, parentName: c.Account?.Parent?.Name,
+          parr: c.Account ? districtParr(c.Account) : undefined,
         };
       }
     }
@@ -257,7 +269,7 @@ class LiveSalesforce implements SalesforceClient {
         if (ctx.matchedBy === "none") ctx.matchedBy = "email-domain";
         ctx.account = {
           id: acct.Id, name: acct.Name, label: acct.Label__c, ownerId: acct.OwnerId,
-          ownerName: acct.Owner?.Name, parentId: acct.ParentId, parentName: acct.Parent?.Name,
+          ownerName: acct.Owner?.Name, parentId: acct.ParentId, parentName: acct.Parent?.Name, parr: districtParr(acct),
         };
       }
     }
@@ -284,7 +296,7 @@ class LiveSalesforce implements SalesforceClient {
         if (ctx.matchedBy === "none") ctx.matchedBy = "account-name";
         ctx.account = {
           id: pick.Id, name: pick.Name, label: pick.Label__c, ownerId: pick.OwnerId,
-          ownerName: pick.Owner?.Name, parentId: pick.ParentId, parentName: pick.Parent?.Name,
+          ownerName: pick.Owner?.Name, parentId: pick.ParentId, parentName: pick.Parent?.Name, parr: districtParr(pick),
         };
       } else if (accounts.length) {
         ctx.accountCandidates = accounts.map((a) => a.Name);

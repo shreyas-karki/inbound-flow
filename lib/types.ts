@@ -46,6 +46,7 @@ export interface SfContext {
     ownerName?: string;
     parentId?: string | null;
     parentName?: string | null;
+    parr?: number; // Total PARR (USD) of the lead's district: Total_PARR__c, the "Total Account PARR" in Slack
   };
   openOpportunity?: { id: string; stage: string; ownerId?: string; ownerName?: string; typeOfSale?: string };
   accountCandidates?: string[]; // when the district name was ambiguous

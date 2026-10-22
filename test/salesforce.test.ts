@@ -64,7 +64,8 @@ describe("account matching", async () => {
 });
 
 describe("email domain matching", async () => {
-  const { emailDomain, districtOf, consensusDistrict } = await import("../lib/salesforce.js");
+  const salesforce = await import("../lib/salesforce.js");
+  const { emailDomain, districtOf, consensusDistrict } = salesforce;
   const nycSchool = {
     AccountId: "ps48", Account: { Name: "Ps 48 William Wordsworth (Jamaica, NY)", ParentId: "gd28",
       Parent: { Name: "[School District] New York City Geographic District #28 (Jamaica, NY)", ParentId: "nycps", Parent: { Name: "[School District] New York City Public Schools (NYCPS)" } } },
@@ -81,6 +82,13 @@ describe("email domain matching", async () => {
   it("climbs through district accounts but never into an ESC or county office", () => {
     expect(districtOf(nycSchool)).toBe("nycps");
     expect(districtOf(txDistrict)).toBe("plano");
+  });
+  it("reads PARR from a school's district, never from an ESC or ROE above a district", () => {
+    // Real accounts, Oct 2026.
+    const { districtParr } = salesforce;
+    expect(districtParr({ Name: "Toledo Public Schools Virtual Academy (Toledo, OH)", Total_PARR__c: 34237, Parent: { Name: "[School District] Toledo City (Toledo, OH)", Total_PARR__c: 969939.6 } })).toBe(969939.6);
+    expect(districtParr({ Name: "[School District] Braceville SD 75 (Braceville, IL)", Total_PARR__c: 8050, Parent: { Name: "[State Ed. Unit] ROE 24 - Grundy/Kendall (Morris, IL)", Total_PARR__c: 10000 } })).toBe(8050);
+    expect(districtParr({ Name: "[School District] Twin Valley Unified School District #75 (Wilmington, VT)", Total_PARR__c: null, Parent: null })).toBeUndefined();
   });
   it("needs a majority of colleagues to agree", () => {
     expect(consensusDistrict([nycSchool, nycSchool, txDistrict])).toBe("nycps");

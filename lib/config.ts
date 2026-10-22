@@ -120,10 +120,19 @@ export const rulesConfig = {
     adoptionTimelines: ["SY26-27", "SY27-28"], // the form's adoption answer
   },
   // A First Touch costs a growth manager an hour, so small or low-scoring districts get a BDR Discovery instead,
-  // whoever asks. Either one caps the lead at Level 2. No Starbridge data (timeout, no match) never caps.
+  // whoever asks. Size is the district's Total PARR in Salesforce; Starbridge enrollment stands in only when
+  // Salesforce has no PARR. Either check caps the lead at Level 2. Missing data never caps.
   firstTouchFloor: {
+    // Salesforce Total PARR, USD. US First Touches Aug 2025-Oct 2026: $20-30k districts won 2 of 34,
+    // $30-40k won 7 of 42 (as well as any band above it).
+    minParr: 30000,
+    minEnrollment: 650, // ~$30k PARR at ~$46 per student; used only without PARR
     minScore: 50, // Starbridge account score, 0-100
-    minEnrollment: 1000, // Starbridge total enrollment
+  },
+  // A very large district always enters the funnel: anyone there who would only get the Level 1 email
+  // (a teacher with no signal, say) gets a BDR Discovery instead. Level 0 non-buyers stay Level 0.
+  largeDistrict: {
+    minParr: 500000, // Salesforce Total PARR, USD
   },
   // Coaches and TOSAs work across classrooms and sit close to curriculum decisions: they can always
   // book a Discovery, and a First Touch when the district is hot.

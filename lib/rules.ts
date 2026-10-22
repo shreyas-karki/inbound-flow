@@ -53,15 +53,25 @@ export function applyRules(sub: Submission, sf: SfContext, sb?: StarbridgeResult
 }
 
 /** Runs after rules and Claude: a First Touch at a small or low-scoring district becomes a BDR Discovery. */
-export function capFirstTouch(decision: Decision, sb: StarbridgeResult): Decision {
-  const a = sb.account;
-  if (decision.route !== "gm" || !a) return decision;
-  const { minScore, minEnrollment } = rulesConfig.firstTouchFloor;
-  const small = a.enrollment !== undefined && a.enrollment < minEnrollment;
-  const weak = a.score < minScore;
-  if (!small && !weak) return decision;
-  const why = [small && `${a.enrollment!.toLocaleString("en-US")} students`, weak && `Starbridge score ${a.score}`].filter(Boolean).join(", ");
+export function capFirstTouch(decision: Decision, sf: SfContext, sb: StarbridgeResult): Decision {
+  if (decision.route !== "gm") return decision;
+  const { minParr, minEnrollment, minScore } = rulesConfig.firstTouchFloor;
+  const parr = sf.account?.parr;
+  const enrollment = sb.account?.enrollment;
+  const why = [
+    parr !== undefined && parr < minParr && `$${Math.round(parr).toLocaleString("en-US")} PARR`,
+    parr === undefined && enrollment !== undefined && enrollment < minEnrollment && `${enrollment.toLocaleString("en-US")} students`,
+    sb.account && sb.account.score < minScore && `Starbridge score ${sb.account.score}`,
+  ].filter(Boolean).join(", ");
+  if (!why) return decision;
   return { ...decision, level: 2, route: "bdr", meeting: "discovery", reason: `${decision.reason} Capped at Discovery: ${why}.` };
+}
+
+/** Runs after the First Touch floor: a Level 1 lead at a very large district becomes a BDR Discovery. */
+export function liftLargeDistrict(decision: Decision, sf: SfContext): Decision {
+  const parr = sf.account?.parr;
+  if (decision.level !== 1 || parr === undefined || parr < rulesConfig.largeDistrict.minParr) return decision;
+  return { ...decision, level: 2, route: "bdr", meeting: "discovery", reason: `${decision.reason} Lifted to Discovery: very large district ($${Math.round(parr).toLocaleString("en-US")} PARR).` };
 }
 
 /** Innovamat staff testing the form: scored like a real lead, but flagged and never written to Salesforce. */

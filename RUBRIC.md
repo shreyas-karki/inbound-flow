@@ -27,6 +27,8 @@ A real K-8 educator with no buying power and no stated reason to switch now.
 - At a district that is not Hot or Warm in Starbridge
 - Unknown or "Other" roles with no message to place them
 
+Never at a district of $500k+ Total PARR: those leads go to Level 2 instead.
+
 Replies go to the BDR inbox. A reply that names a decision maker or describes a review re-scores the lead.
 
 **Why:** 0 of 5 meetings held with teachers who gave no evaluation signal advanced. A teacher's answer to the adoption question is not reliable on its own.
@@ -38,6 +40,7 @@ A real chance where we don't yet have the decision maker or the WHY NOW, so a BD
 - Principals outside NYC who lead one building of a larger district, unless they have a WHY NOW
 - Instructional coaches, math coaches and TOSAs, even with no signal: they can always book a BDR call
 - Teachers who write that their school is evaluating, previewing, piloting or reviewing, or whose district is Hot or Warm
+- Anyone who would otherwise be Level 1 at a very large district ($500k+ Total PARR). A district that size always enters the funnel, even through a teacher.
 
 The call has two goals: the decision maker's name and the WHY NOW. With both, the BDR books a First Touch with the growth manager.
 
@@ -56,7 +59,9 @@ The person who signs, or the person running the review, with a reason to change 
 - Anyone, including a teacher, whose message says they sit on the curriculum, adoption or pilot committee, or lead the review
 - Principals who decide for their whole school: NYC principals, and principals of a single-school district, charter or private school
 
-**Floor:** a district with a Starbridge score under 50, or under 1,000 students, never gets a First Touch. Those leads become a Level 2 Discovery with the BDR, whoever asks. Without Starbridge data the floor doesn't apply.
+**Floor:** a district under $30k Total PARR in Salesforce, or with a Starbridge score under 50, never gets a First Touch, however senior the person or strong the signal. Those leads become a Level 2 Discovery with the BDR. Size is measured by PARR; when Salesforce has no PARR, under 650 students in Starbridge (about $30k) counts instead. With no data at all the floor doesn't apply.
+
+**Why $30k:** of 763 US First Touches since Aug 2025, districts at $20–30k PARR won 2 of 34; districts at $30–40k won 7 of 42, as well as any larger band.
 
 If no meeting is booked within 48 hours, the growth manager follows up personally.
 

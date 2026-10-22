@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyRules, capFirstTouch } from "../lib/rules";
+import { applyRules, capFirstTouch, liftLargeDistrict } from "../lib/rules";
 import { SubmissionSchema, type Decision, type SfContext, type StarbridgeResult } from "../lib/types";
 
 const sub = (over: Record<string, unknown> = {}) =>
@@ -60,20 +60,51 @@ describe("First Touch floor", () => {
     source: "starbridge",
     account: { score: 84, fitBand: "Moderate", signalBand: "Hot", competitors: [], enrollment: 6375, ...over },
   });
+  const sf = (parr?: number): SfContext => ({ matchedBy: "email", account: { id: "1", name: "X", parr } });
 
-  it("sends a small or low-scoring district to a BDR Discovery", () => {
+  it("sends a district under $30k PARR to a BDR Discovery, with or without Starbridge", () => {
+    // Braceville SD 75, IL: $8,050 PARR, booked a First Touch with Neha.
+    expect(capFirstTouch(firstTouch, sf(8050), sb())).toMatchObject({ level: 2, route: "bdr", meeting: "discovery", reason: expect.stringContaining("$8,050 PARR") });
+    expect(capFirstTouch(firstTouch, sf(8050), { source: "timeout" })).toMatchObject({ level: 2, route: "bdr" });
+  });
+
+  it("measures size by PARR when Salesforce has it, and by students only when it doesn't", () => {
+    expect(capFirstTouch(firstTouch, sf(29999), sb())).toMatchObject({ level: 2, reason: expect.stringContaining("$29,999 PARR") });
+    expect(capFirstTouch(firstTouch, sf(30000), sb({ enrollment: 301 }))).toBe(firstTouch);
+    expect(capFirstTouch(firstTouch, sf(), sb({ enrollment: 301 }))).toMatchObject({ level: 2, reason: expect.stringContaining("301 students") });
+    expect(capFirstTouch(firstTouch, sf(), sb({ enrollment: 650 }))).toBe(firstTouch);
+  });
+
+  it("still caps a low Starbridge score, whatever the PARR", () => {
     // Henry Hudson Regional, NJ: score 42, no enrollment from Starbridge.
-    expect(capFirstTouch(firstTouch, sb({ score: 42, enrollment: undefined }))).toMatchObject({ level: 2, route: "bdr", meeting: "discovery", reason: expect.stringContaining("Starbridge score 42") });
-    expect(capFirstTouch(firstTouch, sb({ enrollment: 301 }))).toMatchObject({ level: 2, route: "bdr", reason: expect.stringContaining("301 students") });
+    expect(capFirstTouch(firstTouch, sf(), sb({ score: 42, enrollment: undefined }))).toMatchObject({ level: 2, reason: expect.stringContaining("Starbridge score 42") });
+    expect(capFirstTouch(firstTouch, sf(500000), sb({ score: 42 }))).toMatchObject({ level: 2 });
+    expect(capFirstTouch(firstTouch, sf(30000), sb({ score: 50 }))).toBe(firstTouch);
   });
 
-  it("keeps a First Touch at a sizable district scoring 50+", () => {
-    expect(capFirstTouch(firstTouch, sb({ score: 50, enrollment: 1000 }))).toBe(firstTouch);
-  });
-
-  it("never caps without Starbridge data, and leaves other levels alone", () => {
-    expect(capFirstTouch(firstTouch, { source: "timeout" })).toBe(firstTouch);
+  it("never caps without data, and leaves other levels alone", () => {
+    expect(capFirstTouch(firstTouch, { matchedBy: "none" }, { source: "timeout" })).toBe(firstTouch);
     const owner: Decision = { level: 3, route: "owner", reason: "Existing customer.", source: "rules" };
-    expect(capFirstTouch(owner, sb({ score: 10 }))).toBe(owner);
+    expect(capFirstTouch(owner, sf(100), sb({ score: 10 }))).toBe(owner);
+  });
+});
+
+describe("Very large district", () => {
+  const sf = (parr?: number): SfContext => ({ matchedBy: "email", account: { id: "1", name: "X", parr } });
+  const level1: Decision = { level: 1, route: "email", reason: "Teacher with no evaluation signal.", source: "claude" };
+
+  it("lifts a Level 1 lead at a $500k+ district to a BDR Discovery", () => {
+    // Toledo City, OH: $969,940 PARR.
+    expect(liftLargeDistrict(level1, sf(969939.6))).toMatchObject({ level: 2, route: "bdr", meeting: "discovery", reason: expect.stringContaining("very large district ($969,940 PARR)") });
+    expect(liftLargeDistrict(level1, sf(500000))).toMatchObject({ level: 2 });
+  });
+
+  it("leaves smaller districts, missing PARR, non-buyers and higher levels alone", () => {
+    expect(liftLargeDistrict(level1, sf(499999))).toBe(level1);
+    expect(liftLargeDistrict(level1, sf())).toBe(level1);
+    const level0: Decision = { level: 0, route: "email", reason: "Parent.", source: "rules" };
+    expect(liftLargeDistrict(level0, sf(2000000))).toBe(level0);
+    const firstTouch: Decision = { level: 3, route: "gm", meeting: "first_touch", reason: "Superintendent.", source: "claude" };
+    expect(liftLargeDistrict(firstTouch, sf(2000000))).toBe(firstTouch);
   });
 });
