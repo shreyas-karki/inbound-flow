@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Inbound Lead Rubric</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one letter page. Summary strip of the four levels, then the levels two by two with who / why, then the rules that override Claude, signals, tie-breakers and how we measure it. Print-only, light theme. */
+:root {
+  --fg: #172030; --muted: #5d6879; --line: #d6dce5; --surface: #ffffff;
+  --l0: #6f7a8b; --l1: #a8700c; --l2: #2563d9; --l3: #0f7d58; --own: #8545cf; --floor: #b4520f;
+  --body: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", Menlo, monospace;
+  color-scheme: light;
+}
+@page { size: letter; margin: 0.3in 0.38in; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--surface); color: var(--fg); font: 7.1pt/1.27 var(--body); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.page { display: grid; gap: 5.5pt; }
+header { display: flex; justify-content: space-between; align-items: end; gap: 12pt; border-bottom: 1.5pt solid var(--fg); padding-bottom: 4pt; }
+h1 { margin: 0; font-size: 18pt; font-weight: 800; letter-spacing: -.01em; line-height: 1; }
+.meta { font: 500 6.6pt var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); text-align: right; }
+.lede { margin: 0; color: var(--muted); font-size: 7.8pt; max-width: 100ch; }
+h2 { margin: 0; font-size: 10pt; font-weight: 800; display: flex; align-items: baseline; gap: 5pt; }
+h3 { margin: 0 0 2pt; font: 600 6.4pt var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+p { margin: 0; }
+ul { margin: 0; padding-left: 9pt; display: grid; gap: 1pt; }
+.tag { font: 600 6.6pt var(--mono); text-transform: uppercase; letter-spacing: .05em; padding: 1.5pt 4pt; border-radius: 3pt; color: #fff; }
+.t0 { background: var(--l0); } .t1 { background: var(--l1); } .t2 { background: var(--l2); } .t3 { background: var(--l3); } .to { background: var(--own); }
+
+/* summary strip */
+.strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6pt; }
+.lvl { border-top: 3pt solid; padding: 4pt 6pt 5pt; display: grid; gap: 2pt; align-content: start; }
+.lvl.l0 { border-color: var(--l0); background: color-mix(in srgb, var(--l0) 9%, #fff); }
+.lvl.l1 { border-color: var(--l1); background: color-mix(in srgb, var(--l1) 9%, #fff); }
+.lvl.l2 { border-color: var(--l2); background: color-mix(in srgb, var(--l2) 9%, #fff); }
+.lvl.l3 { border-color: var(--l3); background: color-mix(in srgb, var(--l3) 9%, #fff); }
+.lvl .name { font-weight: 800; font-size: 9.6pt; }
+.lvl .share { font: 500 6.4pt var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.lvl .do { color: var(--fg); }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 5pt 14pt; }
+.card { display: grid; gap: 2.5pt; align-content: start; padding-top: 5pt; border-top: .8pt solid var(--line); }
+.why { color: var(--muted); }
+.why b { color: var(--fg); font-weight: 600; }
+
+.rules { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6pt; }
+.box { border-left: 2.2pt solid; padding: 4pt 6pt; display: grid; gap: 2pt; align-content: start; }
+.box.own { border-color: var(--own); background: color-mix(in srgb, var(--own) 8%, #fff); }
+.box.fast { border-color: var(--l3); background: color-mix(in srgb, var(--l3) 8%, #fff); }
+.box.floor { border-color: var(--floor); background: color-mix(in srgb, var(--floor) 9%, #fff); }
+.box b.h { font-size: 8.4pt; font-weight: 800; }
+
+table { border-collapse: collapse; width: 100%; }
+td, th { text-align: left; vertical-align: top; padding: 1.6pt 4pt; border-bottom: .6pt solid var(--line); }
+th { font: 600 6.3pt var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.bottom { display: grid; grid-template-columns: 1.25fr 1fr; gap: 8pt 14pt; }
+footer { font-size: 6.4pt; color: var(--muted); border-top: .6pt solid var(--line); padding-top: 3pt; display: flex; justify-content: space-between; gap: 10pt; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Inbound Lead Rubric</h1>
+    <div class="meta">Thinking Math! samples · how each lead gets its level<br>Live as of Oct 15, 2026</div>
+  </header>
+  <p class="lede">Every samples request gets one level, 0 to 3, about two seconds after the lead submits. Hard rules decide the clear cases; Claude scores the rest against this rubric and writes a one-line reason that shows in Slack and on the Salesforce Task. Shares are from a retrospective on 200 past inbounds.</p>
+
+  <div class="strip">
+    <div class="lvl l0"><span class="share">Level 0 · ~12% of inbounds</span><span class="name">Dead end</span><span class="do">Thank-you page. Salesforce Contact, not ready to call. No Task, no Slack.</span></div>
+    <div class="lvl l1"><span class="share">Level 1 · ~55%</span><span class="name">Long shot</span><span class="do">Thank-you page + "loop in your principal". Contact owned by the state BDR. No Task, no Slack.</span></div>
+    <div class="lvl l2"><span class="share">Level 2 · ~17%</span><span class="name">Discovery</span><span class="do">BDR's calendar on the page. High-priority Task to the BDR, Slack alert to the team.</span></div>
+    <div class="lvl l3"><span class="share">Level 3 · ~7%</span><span class="name">First Touch</span><span class="do">Growth manager's calendar on the page. Task to the GM, Slack alert with who to add to the call.</span></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2><span class="tag t0">L0</span>Dead end</h2>
+      <p>Anyone who will never buy a district curriculum.</p>
+      <ul>
+        <li>Parents and homeschoolers; students, or anyone whose message gives them away as one</li>
+        <li>Vendors, sponsorship pitches and conference invites</li>
+        <li>Press, politicians, universities and job seekers</li>
+        <li>High-school-only teachers (no K-8 grades)</li>
+        <li>Anyone outside the United States and Canada; internal tests and nonsense</li>
+      </ul>
+      <p class="why"><b>Why:</b> none of the ~25 in the sample produced a meeting, and each Slack post costs a BDR a read.</p>
+    </div>
+
+    <div class="card">
+      <h2><span class="tag t1">L1</span>Long shot</h2>
+      <p>A real K-8 educator with no buying power and no stated reason to switch now.</p>
+      <ul>
+        <li>Teachers and interventionists whose message shows no evaluation, review or pilot</li>
+        <li>…at a district that isn't Hot or Warm in Starbridge</li>
+        <li>Unknown or "Other" roles with nothing to place them</li>
+      </ul>
+      <p>A teacher's adoption-year answer alone doesn't lift them. Coaches and TOSAs never land here.</p>
+      <p class="why"><b>Why:</b> 0 of 5 meetings held with teachers who gave no evaluation signal advanced. A teacher's adoption answer isn't reliable on its own.</p>
+    </div>
+
+    <div class="card">
+      <h2><span class="tag t2">L2</span>Discovery with the BDR</h2>
+      <p>A real chance, but we don't yet have the decision maker or the why-now, so a BDR goes and gets them.</p>
+      <ul>
+        <li>Champions without an active review: math/STEM director or coordinator, curriculum coordinator, MTSS coordinator, Title I director, SpEd director, assistant principal</li>
+        <li>Decision makers with no why-now at a district that isn't Hot or Warm</li>
+        <li>Principals outside NYC who lead one building of a larger district</li>
+        <li>Instructional coaches, math coaches and TOSAs, always, even with no signal</li>
+        <li>Teachers who write that their school is evaluating, previewing, piloting or reviewing, or whose district is Hot or Warm</li>
+        <li>Any Level 3 that falls under the floor (below)</li>
+      </ul>
+      <p>The call has two goals: the decision maker's name and the why-now. With both, the BDR books a First Touch.</p>
+      <p class="why"><b>Why:</b> champions brought in our largest inbound deals (Burlington $200k, Oak Park 97, CESA 4). Teachers and coaches who booked qualified meetings (Kingman, Hainesport) all said they were evaluating.</p>
+    </div>
+
+    <div class="card">
+      <h2><span class="tag t3">L3</span>First Touch with the growth manager</h2>
+      <p>The person who signs, or the person running the review, with a reason to change now.</p>
+      <ul>
+        <li>Decision makers (superintendent, assistant superintendent, CAO, curriculum director, director of teaching &amp; learning, district administrator) with any why-now:
+          adopting SY26-27 or SY27-28; a Hot or Warm district or a score of 70+; "I'm not sure" at a Strong or Ideal fit district; a message about searching, reviewing, piloting or pricing</li>
+        <li>Champions running an active review ("we're starting a 6-8 review")</li>
+        <li>Coaches and TOSAs at a Hot or Warm district</li>
+        <li>Anyone whose message says they sit on the curriculum, adoption or pilot committee, or lead the review</li>
+        <li>Principals who decide for their whole school: NYC, single-school districts, charters, privates</li>
+      </ul>
+      <p>If no meeting is booked within 48 hours, the growth manager follows up personally.</p>
+      <p class="why"><b>Why:</b> about 15 leads fit this profile in the sample and only 2 booked (Simsbury, Nenana). The rest waited 1–3 weeks in the BDR queue.</p>
+    </div>
+  </div>
+
+  <div class="rules">
+    <div class="box own"><b class="h">Before any level: customers and open deals</b><p>Existing customers and open US deals, on the school or its parent district, go straight to the deal owner, then the account owner. No calendar. Live once RevOps gives the app a Salesforce integration user.</p></div>
+    <div class="box fast"><b class="h">Fast lane, no AI</b><p>Anyone who isn't a teacher, at a Hot Starbridge district with 5,000+ students, adopting SY26-27 or SY27-28, is Level 3 straight away.</p></div>
+    <div class="box floor"><b class="h">Level 3 floor</b><p>A district under $30k Total PARR, or with a Starbridge score under 50, never gets a First Touch. Those leads become Level 2 with the BDR, whoever asks. No data, no floor.</p></div>
+  </div>
+
+  <div class="bottom">
+    <div>
+      <table>
+        <tr><th>Signal</th><th>Effect</th></tr>
+        <tr><td>The message says evaluating, previewing, reviewing, searching, piloting, or asks for pricing</td><td>Why-now. Teacher or coach → Level 2; decision maker or champion → Level 3. The message is the strongest signal and can override the role either way.</td></tr>
+        <tr><td>The message shows a student, parent, vendor or nonsense</td><td>Level 0, whatever role was picked</td></tr>
+        <tr><td>Adoption answer SY26-27 or SY27-28</td><td>Counts only from decision makers and champions</td></tr>
+        <tr><td>Coach or TOSA at a Hot or Warm district</td><td>Level 3</td></tr>
+        <tr><td>Starbridge Blocked, or the district just committed to another core program</td><td>Down one level</td></tr>
+      </table>
+    </div>
+    <div style="display: grid; gap: 6pt; align-content: start;">
+      <div>
+        <h2 style="margin-bottom: 2pt;">Tie-breakers</h2>
+        <ul>
+          <li>Decision maker, champion or coach torn between 2 and 3 → 3.</li>
+          <li>Teacher torn between 1 and 2 → 1, unless there's an evaluation signal or a hot district.</li>
+          <li>Teachers reach Level 3 only through committee membership or leading the review.</li>
+          <li>Every decision carries a one-line reason, under 25 words, naming the deciding factor.</li>
+        </ul>
+      </div>
+      <table>
+        <tr><th>How we'll know it works</th><th>Target</th></tr>
+        <tr><td>Level 3 leads with a meeting booked within 7 days</td><td>Most; baseline 2 of ~15</td></tr>
+        <tr><td>Level 2 leads with a first BDR touch within 2 business days</td><td>All</td></tr>
+        <tr><td>Inbounds sent to a BDR on a district with a live deal</td><td>0; baseline ~7%</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <footer><span>Sources: RUBRIC.md, prompts/rubric.md (what Claude reads), lib/rules.ts and lib/config.ts in the inbound-flow repo.</span><span>Routing diagram: Samples Inbound Routing</span></footer>
+</div>
+</body>
+</html>

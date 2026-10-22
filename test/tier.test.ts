@@ -82,6 +82,14 @@ describe("/api/tier", () => {
     expect(out.body.timings).toHaveProperty("starbridge");
   });
 
+  it("shows no calendar when the Salesforce lookup fails", async () => {
+    const broken = { lookup: async () => { throw new Error("Salesforce auth failed"); }, upsertContact: async () => ({ action: "skipped" as const }) };
+    for (const name of ["level2", "level3"]) {
+      const out = await handleTier(SECRET, fixture(name), deps({ salesforce: broken }).d, SECRET);
+      expect(out.body, name).toMatchObject({ booking_url: null });
+    }
+  });
+
   it("Level 3 says who else to add to the call", async () => {
     const out = await handleTier(SECRET, fixture("level3"), deps().d, SECRET);
     expect(out.body).toMatchObject({ also_add: "Neha", host_user_id: IDS.melina, decision_maker: true });

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Inbound Lead Levels</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;800&display=swap">
+<style>
+/* Layout: one letter page. A four-row table (level, who, what happens), then "moves up" and "keeps it lower" side by side, then three always-true rules. Plain words, large type. */
+:root {
+  --fg: #172030; --muted: #5d6879; --line: #d6dce5;
+  --l0: #6f7a8b; --l1: #a8700c; --l2: #2563d9; --l3: #0f7d58; --own: #8545cf; --up: #0f7d58; --down: #b4520f;
+  --body: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+@page { size: letter; margin: 0.45in 0.55in; }
+html { zoom: 0.88; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #fff; color: var(--fg); font: 10.5pt/1.42 var(--body); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.page { display: grid; gap: 18pt; }
+header { display: grid; gap: 5pt; border-bottom: 2pt solid var(--fg); padding-bottom: 8pt; }
+h1 { margin: 0; font-size: 26pt; font-weight: 800; letter-spacing: -.015em; line-height: 1; }
+.sub { margin: 0; color: var(--muted); font-size: 11.5pt; max-width: 80ch; }
+h2 { margin: 0 0 6pt; font-size: 13pt; font-weight: 800; }
+
+table { border-collapse: collapse; width: 100%; }
+th { text-align: left; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 0 10pt 5pt; border-bottom: 1.2pt solid var(--fg); }
+td { padding: 10pt; vertical-align: top; border-bottom: .8pt solid var(--line); }
+td.lv { width: 24%; }
+td.lv .k { display: block; font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+td.lv .n { display: block; font-size: 14pt; font-weight: 800; line-height: 1.15; }
+td.who { width: 40%; }
+.r0 .lv { border-left: 4pt solid var(--l0); } .r0 .k, .r0 .n { color: var(--l0); }
+.r1 .lv { border-left: 4pt solid var(--l1); } .r1 .k, .r1 .n { color: var(--l1); }
+.r2 .lv { border-left: 4pt solid var(--l2); } .r2 .k, .r2 .n { color: var(--l2); }
+.r3 .lv { border-left: 4pt solid var(--l3); } .r3 .k, .r3 .n { color: var(--l3); }
+.eg { display: block; color: var(--muted); font-size: 9.5pt; margin-top: 2pt; }
+
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 14pt; }
+.col { border-top: 3pt solid; padding-top: 8pt; }
+.col.up { border-color: var(--up); } .col.down { border-color: var(--down); }
+ul { margin: 0; padding-left: 13pt; display: grid; gap: 5pt; }
+
+.always { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10pt; }
+.rule { background: #f4f6f9; border-radius: 8pt; padding: 9pt 11pt; display: grid; gap: 2pt; align-content: start; }
+.rule b { font-size: 10.5pt; }
+.rule span { color: var(--muted); font-size: 9.5pt; }
+footer { color: var(--muted); font-size: 8.5pt; border-top: .8pt solid var(--line); padding-top: 5pt; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Inbound Lead Levels</h1>
+    <p class="sub">Every samples request is sorted into one of four levels the moment it comes in. The level decides what the person sees next and who on our team follows up.</p>
+  </header>
+
+  <table>
+    <tr><th>Level</th><th>Who</th><th>What happens next</th></tr>
+    <tr class="r0">
+      <td class="lv"><span class="k">Level 0</span><span class="n">Not a buyer</span></td>
+      <td class="who">People who will never buy a district curriculum<span class="eg">Parents, students, vendors, press, high-school-only teachers, anyone outside the US and Canada</span></td>
+      <td>Thank-you page. Saved in Salesforce, no follow-up.</td>
+    </tr>
+    <tr class="r1">
+      <td class="lv"><span class="k">Level 1</span><span class="n">Interested teacher</span></td>
+      <td class="who">Teachers with no sign their district is choosing a curriculum<span class="eg">A teacher at a quiet district who says nothing about a review</span></td>
+      <td>Thank-you page asking them to loop in their principal. A follow-up email asks a few questions; no call.</td>
+    </tr>
+    <tr class="r2">
+      <td class="lv"><span class="k">Level 2</span><span class="n">Worth a quick call</span></td>
+      <td class="who">People close to the decision, but no timeline yet<span class="eg">Coaches and TOSAs, math coordinators, district leaders who aren't choosing yet, teachers whose school is piloting</span></td>
+      <td>Books a short call with our BDR (Luis or Neftali). The BDR gets a Slack alert and a task.</td>
+    </tr>
+    <tr class="r3">
+      <td class="lv"><span class="k">Level 3</span><span class="n">Ready to talk</span></td>
+      <td class="who">The person who decides, with a reason to change now<span class="eg">A curriculum director or superintendent adopting in the next two school years, or anyone on the adoption committee</span></td>
+      <td>Books a meeting with the growth manager for their state. The growth manager gets a Slack alert and a task.</td>
+    </tr>
+  </table>
+
+  <div class="two">
+    <div class="col up">
+      <h2>What moves a lead up</h2>
+      <ul>
+        <li>Their message says they're reviewing, piloting, or asks about pricing</li>
+        <li>They're on the curriculum or adoption committee</li>
+        <li>A district leader who is adopting in the next two school years</li>
+        <li>Our district data shows the district is actively shopping for math curriculum</li>
+      </ul>
+    </div>
+    <div class="col down">
+      <h2>What keeps a lead lower</h2>
+      <ul>
+        <li>A teacher's answer about adoption timing doesn't count on its own</li>
+        <li>Small districts (under $30k PARR) or a low score in our district data never go straight to a growth manager</li>
+        <li>The district just picked another curriculum</li>
+        <li>Their message shows they're a student, parent or vendor, whatever role they chose</li>
+      </ul>
+    </div>
+  </div>
+
+  <div>
+    <h2>Always true</h2>
+    <div class="always">
+      <div class="rule"><b>Existing customers go to their account owner</b><span>Instead of being sorted. Coming soon, once RevOps gives us a Salesforce login.</span></div>
+      <div class="rule"><b>Coaches and TOSAs always get a call</b><span>At least Level 2, and Level 3 if their district is actively shopping.</span></div>
+      <div class="rule"><b>Every decision comes with a reason</b><span>A one-line explanation shows in Slack and on the Salesforce task, so the team can see why.</span></div>
+    </div>
+  </div>
+
+  <footer>The full rules are in RUBRIC.md in the inbound-flow repo. Companion page: Samples Inbound Routing.</footer>
+</div>
+</body>
+</html>

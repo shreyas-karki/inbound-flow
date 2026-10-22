@@ -63,6 +63,7 @@ export interface Decided {
 
 const THANKS: NextStep = { type: "thanks", message: "Thanks! We just sent you a few resources. Reply to that email any time and our team will get back to you." };
 const LEVEL1: NextStep = { type: "thanks", message: "Thanks! We'll follow up by email about your request." };
+const STANDARD: NextStep = { type: "thanks", message: "Thanks! A member of our team will reach out within one business day." };
 const MIN_FILL_MS = 2500;
 
 /** Unbounce field names or ours, array-wrapped or not → a validated submission. */
@@ -103,7 +104,11 @@ export async function decide(sub: Submission, deps: Deps): Promise<Decided> {
 
   const state = resolveState(sub, sf, sb);
   const host = resolveHost(decision, state, sf, await time("routing_sheet", () => tables));
-  return { sf, sb, decision, state, host, next: nextStep(decision, host), timings, errors };
+  // Without Salesforce we can't tell whether this district is already a customer or an open deal, so we
+  // never offer a calendar: a lead owned by a growth manager could otherwise book with a BDR.
+  const sfDown = errors.some((e) => e.startsWith("salesforce_lookup"));
+  const next = sfDown && decision.route !== "email" ? STANDARD : nextStep(decision, host);
+  return { sf, sb, decision, state, host, next, timings, errors };
 }
 
 /** decide(), but once per lead: the browser and Make share the first caller's answer. */

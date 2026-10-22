@@ -1,0 +1,465 @@
+<title>Samples Inbound Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; the journey is two swimlanes (lead / behind the scenes); the level table scrolls on its own on phones. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --fg: #18202b;
+  --muted: #5a6575;
+  --line: #dde1e7;
+  --accent: #1f6feb;
+  --l0: #7a8494;
+  --l1: #b07a12;
+  --l2: #1f6feb;
+  --l3: #12805c;
+  --own: #8a4fd1;
+  --live: #12805c;
+  --plan: #5a6575;
+  --warn: #b4520f;
+  --warn-bg: #fdf1e7;
+  --no: #b42318;
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11151b; --surface: #191f27; --fg: #e6eaf0; --muted: #9aa5b4; --line: #2c3540;
+    --accent: #6ea8ff; --l0: #98a2b1; --l1: #e0a93c; --l2: #6ea8ff; --l3: #4cc897; --own: #b98af0;
+    --live: #4cc897; --plan: #9aa5b4; --warn: #f0a25e; --warn-bg: #2d2116; --no: #f17a6f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11151b; --surface: #191f27; --fg: #e6eaf0; --muted: #9aa5b4; --line: #2c3540;
+  --accent: #6ea8ff; --l0: #98a2b1; --l1: #e0a93c; --l2: #6ea8ff; --l3: #4cc897; --own: #b98af0;
+  --live: #4cc897; --plan: #9aa5b4; --warn: #f0a25e; --warn-bg: #2d2116; --no: #f17a6f;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--body); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 80px; display: grid; gap: 56px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(30px, 5vw, 44px); letter-spacing: -0.01em; }
+h2 { font-size: 24px; }
+h3 { font-size: 16px; font-family: var(--body); font-weight: 600; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+.eyebrow { font: 500 11px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+section { display: grid; gap: 20px; }
+.lede { font-size: 17px; color: var(--muted); }
+
+/* header */
+header { display: grid; gap: 14px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; font-size: 13px; color: var(--muted); }
+
+/* status chips */
+.st { display: inline-flex; align-items: center; gap: 6px; font: 500 11px/1 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 8px; border-radius: 99px; white-space: nowrap; vertical-align: 2px; }
+.st::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.st.live { color: var(--live); background: color-mix(in srgb, var(--live) 12%, transparent); }
+.st.plan { color: var(--plan); border: 1px dashed var(--plan); padding: 3px 7px; }
+.st.plan::before { background: transparent; border: 1.5px solid currentColor; width: 5px; height: 5px; }
+.st.dec { color: var(--warn); background: var(--warn-bg); }
+.st.no { color: var(--no); background: color-mix(in srgb, var(--no) 12%, transparent); }
+
+/* level pills */
+.lv { display: inline-block; font: 600 12px/1 var(--mono); padding: 4px 7px; border-radius: 5px; color: #fff; white-space: nowrap; }
+.lv0 { background: var(--l0); } .lv1 { background: var(--l1); } .lv2 { background: var(--l2); } .lv3 { background: var(--l3); } .lvo { background: var(--own); }
+:root[data-theme="dark"] .lv { color: #11151b; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .lv { color: #11151b; } }
+
+/* journey swimlanes */
+.lanes { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.lane { display: grid; gap: 0; align-content: start; min-width: 0; }
+.lane-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-bottom: 12px; border-bottom: 2px solid var(--fg); margin-bottom: 14px; }
+.step { position: relative; padding: 0 0 22px 30px; min-width: 0; }
+.step::before { content: ""; position: absolute; left: 9px; top: 22px; bottom: 0; width: 2px; background: var(--line); }
+.step:last-child::before { display: none; }
+.step .dot { position: absolute; left: 0; top: 2px; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--accent); background: var(--surface); font: 600 10px/16px var(--mono); text-align: center; color: var(--accent); }
+.step h3 { margin-bottom: 4px; }
+.step p, .step li { color: var(--muted); font-size: 14px; }
+.step ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 2px; }
+.step .note { margin-top: 8px; font-size: 13px; color: var(--warn); }
+.join { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 16px 18px; display: grid; gap: 6px; }
+.join strong { font-family: var(--body); }
+
+/* decision steps */
+.rules { display: grid; gap: 10px; counter-reset: r; }
+.rule { display: grid; grid-template-columns: 32px 1fr auto; gap: 14px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.rule .n { font: 600 18px/1 var(--display); color: var(--muted); padding-top: 2px; }
+.rule p { font-size: 14px; color: var(--muted); }
+.rule .out { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+
+/* tables */
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 11px 12px; border-bottom: 1px solid var(--line); }
+tr:last-child td, tr:last-child th { border-bottom: 0; }
+thead th { font: 500 11px/1.3 var(--mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); background: color-mix(in srgb, var(--line) 35%, var(--surface)); }
+tbody th { font-weight: 600; white-space: nowrap; }
+.grid td { text-align: center; }
+.grid td small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 4px; }
+.matrix { min-width: 960px; }
+.matrix tbody th { width: 140px; color: var(--muted); font-weight: 500; font-size: 12.5px; white-space: normal; }
+.matrix thead th { font: 600 13px/1.3 var(--body); text-transform: none; letter-spacing: 0; color: var(--fg); }
+.matrix thead th .sub { display: block; font-weight: 400; color: var(--muted); font-size: 12px; margin-top: 4px; }
+.matrix td { width: 18%; }
+.matrix td .st { margin-top: 6px; }
+.x { color: var(--no); font-weight: 600; }
+.ok { color: var(--live); font-weight: 600; }
+.small { font-size: 12.5px; color: var(--muted); }
+
+/* booking */
+.chain { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0; }
+.link { flex: 1 1 170px; min-width: 0; background: var(--surface); border: 1px solid var(--line); padding: 14px; display: grid; gap: 4px; align-content: start; }
+.link:first-child { border-radius: 10px 0 0 10px; }
+.link:last-child { border-radius: 0 10px 10px 0; }
+.link + .link { border-left: 0; }
+.link.broken { border: 1.5px dashed var(--no); background: color-mix(in srgb, var(--no) 6%, var(--surface)); }
+.link p { font-size: 13px; color: var(--muted); }
+.opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.opt { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.opt.pick { border: 2px solid var(--l3); }
+.opt p, .opt li { font-size: 14px; color: var(--muted); }
+.opt ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+.callout { border-left: 3px solid var(--warn); background: var(--warn-bg); padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 14px; }
+
+/* checklist */
+.todo { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.todo ol { margin: 0; padding-left: 20px; display: grid; gap: 12px; }
+.todo li { font-size: 14px; }
+.todo li span { color: var(--muted); display: block; }
+
+footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; display: grid; gap: 6px; }
+
+@media (max-width: 820px) {
+  .lanes, .opts, .todo { grid-template-columns: 1fr; }
+  .rule { grid-template-columns: 24px 1fr; }
+  .rule .out { grid-column: 2; align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
+  .link, .link:first-child, .link:last-child { border-radius: 0; flex-basis: 100%; }
+  .link + .link { border-left: 1px solid var(--line); border-top: 0; }
+  .link.broken { border-top: 1.5px dashed var(--no); }
+  .link:first-child { border-radius: 10px 10px 0 0; }
+  .link:last-child { border-radius: 0 0 10px 10px; }
+}
+</style>
+
+<div class="wrap">
+
+<header>
+  <span class="eyebrow">Thinking Math! samples · tiered test arm · as of Oct 13, 2026</span>
+  <h1>Samples Inbound Flow</h1>
+  <p class="lede">Everything that happens from the moment someone lands on the new samples page: how they get a level, what they see, who gets the lead, what lands in Salesforce and Slack, which email they get, and what happens when they book.</p>
+  <div class="legend">
+    <span class="st live">Live</span> working on the test page today
+    <span class="st plan">Planned</span> agreed, not built yet
+    <span class="st dec">Decide</span> the call and the build disagree
+    <span class="st no">Gap</span> broken or missing
+  </div>
+</header>
+
+<!-- 1. JOURNEY -->
+<section aria-labelledby="s1">
+  <span class="eyebrow">1 · The journey</span>
+  <h2 id="s1">From ad click to next step, in two lanes</h2>
+  <p>When the lead hits submit, two things start at once. Their browser goes to our page and waits for a decision. Unbounce sends the same form to Make. Both ask the app for the decision, and the app scores each lead once and shares the answer for 2 hours, so the calendar the lead sees always matches the level in Slack.</p>
+
+  <div class="lanes">
+    <div class="lane">
+      <div class="lane-h"><h3>What the lead sees</h3><span class="eyebrow">their browser</span></div>
+      <div class="step"><span class="dot">1</span>
+        <h3>Clicks an ad, lands on the page</h3>
+        <p>Test arm: <span class="mono">forms.innovamat.com/request-samples-2</span>. Control arm: today's samples page, untouched.</p>
+      </div>
+      <div class="step"><span class="dot">2</span>
+        <h3>Fills in the form</h3>
+        <ul>
+          <li>Name, email, phone, role, address</li>
+          <li>District, from a search box. Picking one starts the Starbridge lookup early, so the answer is ready by submit.</li>
+          <li>"When is your district planning to adopt a new math curriculum?"</li>
+        </ul>
+        <p class="note"><span class="st no">Gap</span> No State field and no free-text message yet. The state drives who gets the lead, and the message is the rubric's strongest signal.</p>
+      </div>
+      <div class="step"><span class="dot">3</span>
+        <h3>Submits, waits about 1.5 to 3 seconds</h3>
+        <p>Redirected to our page, which asks the app for the decision.</p>
+      </div>
+      <div class="step"><span class="dot">4</span>
+        <h3>Sees one of four next steps</h3>
+        <ul>
+          <li><span class="lv lv3">L3</span> The state's First Touch owner's calendar</li>
+          <li><span class="lv lv2">L2</span> The state BDR's calendar</li>
+          <li><span class="lv lv1">L1</span> <span class="lv lv0">L0</span> "Thanks, we'll follow up by email"</li>
+          <li><span class="lv lvo">Customer</span> "[Owner] will reach out shortly"</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-h"><h3>Behind the scenes</h3><span class="eyebrow">Make + the app</span></div>
+      <div class="step"><span class="dot">1</span>
+        <h3>Unbounce sends the form to Make</h3>
+        <p>New scenario "US Physical Samples — Tiered" (262495). Production scenario 172177 keeps running the control page, unchanged.</p>
+      </div>
+      <div class="step"><span class="dot">2</span>
+        <h3>Make asks the app for the level</h3>
+        <ul>
+          <li>Salesforce: is this a customer or an open deal? <span class="st no">Gap</span></li>
+          <li>Starbridge: district score, fit, Hot/Warm signal, enrollment</li>
+          <li>Hard rules first, then Claude with the rubric for judgment calls</li>
+        </ul>
+        <p class="note">If the app fails or takes too long, the lead is Level 2 by default, so nobody is dropped.</p>
+      </div>
+      <div class="step"><span class="dot">3</span>
+        <h3>Make does the writing</h3>
+        <ul>
+          <li>Salesforce Contact and Campaign Member (everyone)</li>
+          <li>Salesforce Task and Slack alert (Level 2 and up)</li>
+          <li>Iterable profile with <span class="mono">inbound_level</span> (everyone)</li>
+        </ul>
+        <p class="note">Internal <span class="mono">@innovamat.com</span> tests are scored like real leads but never written to Salesforce, and post only to #test-inbounds-channel.</p>
+      </div>
+      <div class="step"><span class="dot">4</span>
+        <h3>Iterable sends the email</h3>
+        <p>Today everyone gets the same samples email from the nurture journey. Tiered emails are in section 3.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="join">
+    <strong>Then, if they book</strong>
+    <p class="small">The booking lands on the host's Google Calendar and the lead gets a Google invite. It does not become a Salesforce Event. That gap and the fix options are in section 4.</p>
+  </div>
+</section>
+
+<!-- 2. DECISION -->
+<section aria-labelledby="s2">
+  <span class="eyebrow">2 · The level</span>
+  <h2 id="s2">How the level is decided</h2>
+  <p>The checks run in this order, and the first one that matches decides. Only leads that pass the first three reach Claude.</p>
+
+  <div class="rules">
+    <div class="rule"><span class="n">1</span>
+      <div><h3>Existing customer or open US deal</h3><p>Goes straight to the deal owner, or else the account owner. No calendar.</p></div>
+      <div class="out"><span class="lv lvo">Owner</span><span class="st no">Gap</span></div>
+    </div>
+    <div class="rule"><span class="n">2</span>
+      <div><h3>Outside the US and Canada, or a role that never buys</h3><p>Parent or homeschooler, press, politician, university, consultant.</p></div>
+      <div class="out"><span class="lv lv0">L0</span><span class="st live">Live</span></div>
+    </div>
+    <div class="rule"><span class="n">3</span>
+      <div><h3>Growth manager fast lane</h3><p>Anyone who isn't a teacher, at a <b>Hot</b> Starbridge district with <b>5,000+ students</b>, adopting <b>SY26-27 or SY27-28</b>. No AI needed.</p></div>
+      <div class="out"><span class="lv lv3">L3</span><span class="st live">Live</span></div>
+    </div>
+    <div class="rule"><span class="n">4</span>
+      <div><h3>Claude scores everyone else with the rubric</h3><p>About 2 seconds. Role plus "why now" signals, summarized in the grid below.</p></div>
+      <div class="out"><span class="lv lv1">L1</span><span class="lv lv2">L2</span><span class="lv lv3">L3</span></div>
+    </div>
+  </div>
+
+  <div class="scroll">
+    <table class="grid" style="min-width:720px">
+      <thead><tr>
+        <th style="text-align:left">Role</th>
+        <th>No signal</th>
+        <th>Hot or Warm district</th>
+        <th>Adopting SY26-27 / 27-28</th>
+        <th>Message says evaluating, piloting, pricing</th>
+        <th>Message says they're on the committee</th>
+      </tr></thead>
+      <tbody>
+        <tr><th>Decision maker<br><span class="small">Supt, CAO, Curriculum Dir, T&amp;L Dir</span></th>
+          <td><span class="lv lv2">L2</span><small>BDR finds the why now</small></td><td><span class="lv lv3">L3</span></td><td><span class="lv lv3">L3</span></td><td><span class="lv lv3">L3</span></td><td><span class="lv lv3">L3</span></td></tr>
+        <tr><th>Champion<br><span class="small">Math/STEM Dir or Coord, MTSS, AP</span></th>
+          <td><span class="lv lv2">L2</span></td><td><span class="lv lv3">L3</span></td><td><span class="lv lv3">L3</span></td><td><span class="lv lv3">L3</span></td><td><span class="lv lv3">L3</span></td></tr>
+        <tr><th>Coach or TOSA</th>
+          <td><span class="lv lv2">L2</span><small>never below 2</small></td><td><span class="lv lv3">L3</span></td><td><span class="lv lv2">L2</span></td><td><span class="lv lv2">L2</span></td><td><span class="lv lv3">L3</span></td></tr>
+        <tr><th>Teacher</th>
+          <td><span class="lv lv1">L1</span></td><td><span class="lv lv2">L2</span></td><td><span class="lv lv1">L1</span>&nbsp;<span class="lv lv2">L2</span><small>rubric says both</small></td><td><span class="lv lv2">L2</span></td><td><span class="lv lv3">L3</span></td></tr>
+        <tr><th>"Other" role</th>
+          <td><span class="lv lv1">L1</span></td><td colspan="4"><small style="margin:0">Claude reads the role text and treats them like the closest group above</small></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small"><b>Level 3 floor:</b> a district under $30k Total PARR, or with a Starbridge score under 50, never gets a First Touch. Those leads become Level 2 Discovery with the BDR, whoever asks. Without PARR, under 650 students counts instead. With no data the floor doesn't apply.</p>
+  <p class="small">Also: a message that reveals a student, parent, vendor or high-school-only teacher drops to Level 0 whatever the role. A Starbridge "Blocked" district, or one that just picked another program, drops one level. Decision makers who answer "I'm not sure" at a Strong or Ideal fit district are Level 3. Principals count as decision makers in NYC, charters, privates and single-school districts; otherwise they're champions.</p>
+</section>
+
+<!-- 3. MATRIX -->
+<section aria-labelledby="s3">
+  <span class="eyebrow">3 · Outcomes</span>
+  <h2 id="s3">What each level gets</h2>
+  <p>One column per outcome. Read down a column to follow one lead from submit to follow-up.</p>
+
+  <div class="scroll">
+    <table class="matrix">
+      <thead><tr>
+        <th></th>
+        <th><span class="lv lv0">L0</span> Dead end<span class="sub">Parents, homeschool, vendors, press, students, outside US/Canada</span></th>
+        <th><span class="lv lv1">L1</span> Long shot<span class="sub">Teachers with no signal at a district that isn't hot; unplaceable "Other"</span></th>
+        <th><span class="lv lv2">L2</span> Discovery<span class="sub">Coaches and TOSAs; teachers with a signal; leaders with no why now</span></th>
+        <th><span class="lv lv3">L3</span> First Touch<span class="sub">Leaders with a why now; coaches at hot districts; committee members</span></th>
+        <th><span class="lv lvo">Owner</span> Customer or open deal<span class="sub">Account already ours or in the pipeline</span></th>
+      </tr></thead>
+      <tbody>
+        <tr><th>Page after submit</th>
+          <td>"Thanks, we'll follow up by email."</td>
+          <td>Same, plus a nudge to loop in their principal or curriculum lead.</td>
+          <td>The state BDR's calendar (Luis or Neftali).<br><span class="st live">Live</span></td>
+          <td>The state's First Touch owner's calendar, from the ft_owners tab.<br><span class="st live">Live</span></td>
+          <td>"[Owner] will reach out to you shortly." No calendar.</td></tr>
+        <tr><th>Who gets the lead</th>
+          <td>Nobody.</td>
+          <td>State BDR, as Contact owner only.</td>
+          <td>State BDR from the <b>Mapping</b> tab: Neftali for the West, Texas and Rest of US; Luis for everyone else.</td>
+          <td>From the <b>ft_owners</b> tab: Eric (CT, MA, NY), Neha (IL, IN), Rob (PA), Arnau (OH, FL, GA), JT (NJ), Prynce (MI, WI, NC, other). "Also add" people join the call.</td>
+          <td>Deal owner, else account owner.</td></tr>
+        <tr><th>Salesforce Contact + Campaign Member</th>
+          <td><span class="ok">Yes</span>, for visibility. Not marked ready to call.<br><span class="st live">Live</span></td>
+          <td><span class="ok">Yes</span></td><td><span class="ok">Yes</span></td><td><span class="ok">Yes</span></td><td><span class="ok">Yes</span></td></tr>
+        <tr><th>Salesforce Task</th>
+          <td><span class="x">No</span></td><td><span class="x">No</span></td>
+          <td><span class="ok">Yes</span>, High priority, due today, owned by the BDR, with the level and reason.</td>
+          <td><span class="ok">Yes</span>, same, owned by the First Touch owner.</td>
+          <td><span class="ok">Yes</span>, owned by the owner.</td></tr>
+        <tr><th>Slack alert</th>
+          <td><span class="x">No</span></td><td><span class="x">No</span></td>
+          <td><span class="ok">Yes</span>, in the state team's channel, with level, reason, calendar shown and Starbridge on top.</td>
+          <td><span class="ok">Yes</span>, same, plus who to add to the call.</td>
+          <td><span class="ok">Yes</span></td></tr>
+        <tr><th>Email today</th>
+          <td colspan="5">Everyone gets the same samples email from the Iterable nurture journey. <span class="st no">Gap</span> <span class="small">The journey may filter on the original page, so the test page has to be added to it.</span></td></tr>
+        <tr><th>Email planned</th>
+          <td>Plain thank-you with free resources. No sequence.<br><span class="st plan">Planned</span></td>
+          <td>Samples plus qualifying questions ("who chooses math curriculum at your district?"), CC Luis or Tali.<br><span class="st plan">Planned</span></td>
+          <td colspan="2">Meeting context plus the calendar link: "If you haven't booked yet, or need to reschedule, here it is." Same email whether or not they booked, for now.<br><span class="st plan">Planned</span></td>
+          <td>None from marketing; the owner reaches out.</td></tr>
+        <tr><th>SMS</th>
+          <td>None</td><td>None</td>
+          <td colspan="2">A Kixie text on submit.<br><span class="st dec">Decide</span> <span class="small">The call described a text to the lead; the build plan is a text to the BDR or owner.</span></td>
+          <td>None</td></tr>
+        <tr><th>If they book</th>
+          <td>n/a</td><td>n/a</td>
+          <td colspan="2">Event on the host's Google Calendar, invite to the lead. <span class="st no">Gap</span> <span class="small">No Salesforce Event, so the booking is invisible to reporting. See section 4.</span></td>
+          <td>n/a</td></tr>
+        <tr><th>If they don't book</th>
+          <td>Nothing.</td>
+          <td>A reply goes to the BDR inbox; a reply naming a decision maker or a review should re-score them. <span class="st plan">Planned</span></td>
+          <td>BDR works the Task. Goal of the call: the decision maker's name and the why now, then book a First Touch.</td>
+          <td>Growth manager follows up personally after 48 hours. <span class="st dec">Decide</span> <span class="small">Who owns that follow-up is still open.</span></td>
+          <td>Owner follows up.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small"><span class="st no">Gap</span> on the customer column: the app can't log in to Salesforce (the login user is on SSO), so step 1 never fires and customers are scored like new leads. Example: Akron shows $944K PARR in Salesforce but would route to a First Touch owner. Needs an API-only integration user from RevOps.</p>
+</section>
+
+<!-- 4. BOOKINGS -->
+<section aria-labelledby="s4">
+  <span class="eyebrow">4 · Bookings</span>
+  <h2 id="s4">Getting booked meetings into Salesforce</h2>
+  <p>Booking in Salesforce shows up on Google Calendar through Einstein Activity Capture. The other direction doesn't: when a lead books on a growth manager's Google appointment page, nothing reaches Salesforce.</p>
+
+  <div class="chain" role="list">
+    <div class="link" role="listitem"><span class="eyebrow">Step 1</span><h3>Lead picks a time</h3><p>On the host's Google appointment page, embedded on our thank-you page.</p></div>
+    <div class="link" role="listitem"><span class="eyebrow">Step 2</span><h3>Google Calendar event</h3><p>On the host's calendar, with the lead's email as a guest. The lead gets the invite.</p></div>
+    <div class="link broken" role="listitem"><span class="eyebrow">Step 3 · missing</span><h3>Salesforce Event</h3><p>Never created. The booking only exists if the host logs it by hand.</p></div>
+    <div class="link" role="listitem"><span class="eyebrow">Step 4</span><h3>Reporting</h3><p>First-touch counts, booking rate per landing page, 48-hour no-book follow-ups.</p></div>
+  </div>
+
+  <div class="callout"><b>This blocks the A/B test's main number.</b> Goal 2 is "more bookings" (today about 1 in 5 decision makers book). If test-arm bookings only exist in Google Calendar, the per-page first-touch report can't count them.</div>
+
+  <p>Google Calendar does have an API. It can list events, search them by guest email, and send a notification when a calendar changes, and Make has Google Calendar modules built on it. The real limitation is narrower: Google appointment pages have no "someone just booked" webhook like Calendly does, so we have to watch the calendars and spot new events whose guest is a lead we just routed.</p>
+
+  <div class="opts">
+    <div class="opt pick">
+      <span class="eyebrow">Option A · check first</span>
+      <h3>Turn on Google → Salesforce sync in Einstein</h3>
+      <p>Einstein Activity Capture has two separate features. <b>Activity capture</b> shows Google events on the activity timeline but doesn't create real Event records, so they can't be reported on. <b>Event sync</b> creates Event records, and its direction can be "Salesforce to Google" only, or both ways.</p>
+      <ul>
+        <li>Ask RevOps which one the growth managers' Einstein configuration uses, and in which direction. "Salesforce to Google only" matches what you're seeing exactly.</li>
+        <li>No build. Check that synced events land on the right Contact and Account, and whether they can carry a type like First Touch.</li>
+      </ul>
+    </div>
+    <div class="opt">
+      <span class="eyebrow">Option B · fallback</span>
+      <h3>Make watches the hosts' calendars</h3>
+      <p>Already on the plan as the "bookings tracker".</p>
+      <ul>
+        <li>Google Calendar "Watch events" on each host's calendar.</li>
+        <li>Match the guest email to a recent inbound lead.</li>
+        <li>Create the Salesforce Event (Contact, Account, First Touch or Discovery) and post "Booked" in Slack.</li>
+        <li>Each host connects Google to Make once, or shares their calendar with one account.</li>
+      </ul>
+    </div>
+    <div class="opt">
+      <span class="eyebrow">Option C · most robust</span>
+      <h3>The app reads calendars directly</h3>
+      <ul>
+        <li>A Google Workspace service account that can read the hosts' calendars (needs a Google admin to approve).</li>
+        <li>Google pushes a notification on every change; the app matches the guest to the lead it routed and writes the Event.</li>
+        <li>Also gives us the booked or not-booked answer for the email branch later.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="small">Recommendation: ask RevOps about option A today. If synced events don't land on the Contact, build option B before launch, so test-arm bookings are counted from day one. Either way, booking detection also unlocks the things we parked: a different email for booked vs not booked, the 48-hour no-book follow-up, and reminder emails for no-shows.</p>
+</section>
+
+<!-- 5. TODO -->
+<section aria-labelledby="s5">
+  <span class="eyebrow">5 · Before the A/B test</span>
+  <h2 id="s5">What's left before launch</h2>
+
+  <div class="todo">
+    <div>
+      <h3 style="margin-bottom:12px"><span class="st dec">Decide</span> Where today's call and the build disagree</h3>
+      <ol>
+        <li>Curriculum directors always go to a growth manager<span>Built: a decision maker with no why now at a district that isn't hot goes to a BDR (Level 2). Call: growth manager regardless of heat. One rule to change.</span></li>
+        <li>Who gets the SMS<span>The lead, the BDR or owner, or both. Not built either way.</span></li>
+        <li>Teacher adopting soon, no other signal<span>The rubric says Level 1 in one place and Level 2 in another. Pick one.</span></li>
+        <li>Parents to the Solver team<span>Not needed on this form (Maria). Revisit when other forms use this flow.</span></li>
+      </ol>
+    </div>
+    <div>
+      <h3 style="margin-bottom:12px"><span class="st no">Gap</span> To finish</h3>
+      <ol>
+        <li>Booking tracking<span>Section 4. Without it the A/B test can't count bookings.</span></li>
+        <li>Clean up the owner sheet<span>Víctor Pla is out of Make (Neftali is now the fallback owner) but still listed in calendar_links. Making the sheet update itself from Salesforce can come after launch.</span></li>
+        <li>State dropdown and a message box on the test page<span>State drives routing; the message is the strongest signal.</span></li>
+        <li>Salesforce integration user from RevOps<span>So customers and open deals go to their owner.</span></li>
+        <li>Iterable<span>Write the Level 0, 1 and 2/3 emails, split the journey on inbound_level, and make sure the test page's submissions enter it.</span></li>
+        <li>At launch<span>Turn Slack test mode off in Make, rotate the app secrets, and point a share of ads at the test page.</span></li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- 6. AB -->
+<section aria-labelledby="s6">
+  <span class="eyebrow">6 · Measuring it</span>
+  <h2 id="s6">The A/B test</h2>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Goal</th><th>Measured as</th><th>Needs</th></tr></thead>
+      <tbody>
+        <tr><th>Speed to lead</th><td>Minutes from submit to a booked meeting, and to first BDR touch</td><td>Submit time (Salesforce) and booking time (section 4)</td></tr>
+        <tr><th>More bookings</th><td>Share of Level 2 and Level 3 leads with a meeting within 7 days, per landing page. Baseline: about 1 in 5 decision makers.</td><td>Booking tracking (section 4)</td></tr>
+        <tr><th>Fewer no-shows</th><td>Held rate of booked meetings</td><td>Parked for now; reminders come after booking tracking</td></tr>
+        <tr><th>Cost</th><td>Make credits per lead (172177 uses about 18)</td><td>Make execution history</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small">Setup: about $50 a day to each page, first touches counted per landing page in Maria's report, run for a few weeks.</p>
+</section>
+
+<footer>
+  <span>Sources: app code (rules, rubric, routing), Make scenario 262495 blueprint, and the "US - Mapping Owners for Inbounds" sheet, read Oct 13, 2026.</span>
+  <span>Rubric in full: RUBRIC.md in the inbound-flow repo.</span>
+</footer>
+
+</div>

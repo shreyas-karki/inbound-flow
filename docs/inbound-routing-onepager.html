@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Samples Inbound Routing</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one letter page. Compact diagram on top, rubric underneath in three columns, signals strip at the bottom. Print-only, single light theme. */
+:root {
+  --fg: #172030; --muted: #5d6879; --line: #d6dce5; --surface: #ffffff; --soft: #f3f6fb;
+  --l0: #6f7a8b; --l1: #a8700c; --l2: #2563d9; --l3: #0f7d58; --own: #8545cf; --floor: #b4520f;
+  --body: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", Menlo, monospace;
+  color-scheme: light;
+}
+@page { size: letter; margin: 0.32in 0.36in; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--surface); color: var(--fg); font: 7.6pt/1.32 var(--body); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.page { display: grid; gap: 7pt; }
+header { display: flex; justify-content: space-between; align-items: end; gap: 12pt; border-bottom: 1.5pt solid var(--fg); padding-bottom: 4pt; }
+h1 { margin: 0; font-size: 17pt; font-weight: 800; letter-spacing: -.01em; line-height: 1; }
+.meta { font: 500 6.6pt var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); text-align: right; }
+svg { display: block; width: 100%; height: auto; }
+.dg text { font-family: var(--body); fill: var(--fg); }
+.dg .t { font-size: 16px; font-weight: 600; }
+.dg .s { font-size: 13px; fill: var(--muted); }
+.dg .v { font-size: 14.5px; font-weight: 500; }
+.dg .v2 { font-size: 12.5px; fill: var(--muted); }
+.dg .lab { font: 500 12px var(--mono); letter-spacing: .06em; fill: var(--muted); }
+.dg .el { font: 500 11.5px var(--mono); fill: var(--muted); }
+.dg .bx { fill: var(--surface); stroke: var(--line); stroke-width: 1.4; }
+.dg .soft { fill: var(--soft); stroke: var(--line); stroke-width: 1.4; }
+.dg .dash { stroke: var(--muted); stroke-dasharray: 5 4; }
+.dg .ed { stroke: var(--muted); stroke-width: 1.6; fill: none; }
+.dg .ed.dash { stroke-dasharray: 5 4; }
+.dg .sep { stroke: var(--line); stroke-width: 1; }
+.dg .ah { fill: var(--muted); }
+.dg .num { fill: var(--fg); } .dg .numt { fill: var(--surface); font-size: 12px; font-weight: 600; }
+.dg .floor { fill: color-mix(in srgb, var(--floor) 14%, var(--surface)); }
+.dg .floort { fill: var(--floor); font-weight: 600; font-size: 14.5px; }
+.dg .b0 { fill: color-mix(in srgb, var(--l0) 15%, var(--surface)); } .dg .c0 { fill: var(--l0); }
+.dg .b1 { fill: color-mix(in srgb, var(--l1) 15%, var(--surface)); } .dg .c1 { fill: var(--l1); }
+.dg .b2 { fill: color-mix(in srgb, var(--l2) 15%, var(--surface)); } .dg .c2 { fill: var(--l2); }
+.dg .b3 { fill: color-mix(in srgb, var(--l3) 15%, var(--surface)); } .dg .c3 { fill: var(--l3); }
+.dg .bo { fill: color-mix(in srgb, var(--own) 15%, var(--surface)); } .dg .co { fill: var(--own); }
+.dg .pill { font-size: 13px; font-weight: 600; }
+.dg .ht { font-size: 15px; font-weight: 800; }
+
+h2 { margin: 0 0 3pt; font-size: 9.4pt; font-weight: 800; display: flex; align-items: center; gap: 5pt; }
+.tag { font: 600 6.6pt var(--mono); text-transform: uppercase; letter-spacing: .05em; padding: 1.5pt 4pt; border-radius: 3pt; color: #fff; }
+.t0 { background: var(--l0); } .t1 { background: var(--l1); } .t2 { background: var(--l2); } .t3 { background: var(--l3); } .to { background: var(--own); }
+.rubric { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8pt 12pt; }
+.rubric section { display: grid; gap: 6pt; align-content: start; }
+.rubric p { margin: 0; }
+.rubric ul { margin: 0; padding-left: 9pt; display: grid; gap: 1.5pt; }
+.why { color: var(--muted); }
+.box { border-left: 2pt solid var(--floor); background: color-mix(in srgb, var(--floor) 9%, var(--surface)); padding: 3pt 5pt; }
+.box.fast { border-color: var(--l3); background: color-mix(in srgb, var(--l3) 8%, var(--surface)); }
+.sig { display: grid; grid-template-columns: 1.35fr 1fr; gap: 10pt; border-top: 1pt solid var(--line); padding-top: 5pt; }
+table { border-collapse: collapse; width: 100%; }
+td, th { text-align: left; vertical-align: top; padding: 2pt 4pt; border-bottom: .6pt solid var(--line); }
+th { font: 600 6.4pt var(--mono); text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+footer { font-size: 6.4pt; color: var(--muted); border-top: .6pt solid var(--line); padding-top: 3pt; display: flex; justify-content: space-between; gap: 10pt; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Samples Inbound Routing</h1>
+    <div class="meta">Thinking Math! samples · test page request-samples-2<br>Live as of Oct 15, 2026</div>
+  </header>
+
+  <svg class="dg" viewBox="0 0 1200 600" role="img" aria-label="A lead submits the samples form; the browser and Make ask the app for one shared decision; the app checks existing customers, non-buyers, a fast lane and then Claude, with a Level 3 floor; each level gets a different page, Salesforce record, Slack alert and email; Level 2 and 3 can book a meeting.">
+    <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+
+    <rect class="bx" x="10" y="10" width="320" height="64" rx="10"/>
+    <text class="t" x="170" y="38" text-anchor="middle">Lead submits the samples form</text>
+    <text class="s" x="170" y="58" text-anchor="middle">role · district · adoption year</text>
+    <line class="ed" x1="170" y1="74" x2="170" y2="97" marker-end="url(#ar)"/>
+    <rect class="bx" x="10" y="100" width="320" height="64" rx="10"/>
+    <text class="t" x="170" y="128" text-anchor="middle">Browser and Make ask the app</text>
+    <text class="s" x="170" y="148" text-anchor="middle">one shared decision, back in ~2 seconds</text>
+    <text class="s" x="170" y="192" text-anchor="middle">@innovamat.com tests never write</text>
+    <text class="s" x="170" y="209" text-anchor="middle">to Salesforce or post to team channels</text>
+    <line class="ed" x1="330" y1="132" x2="357" y2="132" marker-end="url(#ar)"/>
+
+    <rect class="soft" x="360" y="10" width="830" height="220" rx="12"/>
+    <text class="t" x="382" y="36">The app picks the level</text>
+    <text class="s" x="1172" y="36" text-anchor="end">checked in order · first match wins</text>
+
+    <circle class="num" cx="392" cy="62" r="11"/><text class="numt" x="392" y="66" text-anchor="middle">1</text>
+    <text class="v" x="412" y="67">Existing customer or open deal <tspan class="v2"> · to their owner, once the app has a Salesforce login</tspan></text>
+    <rect class="bo dash" x="1080" y="50" width="96" height="24" rx="12"/><text class="pill co" x="1128" y="66" text-anchor="middle">Owner</text>
+
+    <circle class="num" cx="392" cy="96" r="11"/><text class="numt" x="392" y="100" text-anchor="middle">2</text>
+    <text class="v" x="412" y="101">Outside US/Canada, or a role that never buys <tspan class="v2"> · parents, press, vendors</tspan></text>
+    <rect class="b0" x="1080" y="84" width="96" height="24" rx="12"/><text class="pill c0" x="1128" y="100" text-anchor="middle">Level 0</text>
+
+    <circle class="num" cx="392" cy="130" r="11"/><text class="numt" x="392" y="134" text-anchor="middle">3</text>
+    <text class="v" x="412" y="135">Fast lane <tspan class="v2"> · not a teacher, Hot district, 5,000+ students, adopting SY26-27/27-28</tspan></text>
+    <rect class="b3" x="1080" y="118" width="96" height="24" rx="12"/><text class="pill c3" x="1128" y="134" text-anchor="middle">Level 3</text>
+
+    <circle class="num" cx="392" cy="164" r="11"/><text class="numt" x="392" y="168" text-anchor="middle">4</text>
+    <text class="v" x="412" y="169">Claude scores everyone else <tspan class="v2"> · role + why-now signals, rubric below</tspan></text>
+    <rect class="b1" x="1018" y="152" width="50" height="24" rx="12"/><text class="pill c1" x="1043" y="168" text-anchor="middle">L1</text>
+    <rect class="b2" x="1072" y="152" width="50" height="24" rx="12"/><text class="pill c2" x="1097" y="168" text-anchor="middle">L2</text>
+    <rect class="b3" x="1126" y="152" width="50" height="24" rx="12"/><text class="pill c3" x="1151" y="168" text-anchor="middle">L3</text>
+
+    <rect class="floor" x="380" y="188" width="796" height="30" rx="8"/>
+    <text class="floort" x="396" y="208">Level 3 floor <tspan class="v" style="fill: var(--fg)"> · under $30k PARR, or Starbridge score under 50, becomes Level 2</tspan></text>
+
+    <line class="ed" x1="775" y1="230" x2="775" y2="245"/>
+    <line class="ed" x1="230" y1="245" x2="1086" y2="245"/>
+    <line class="ed" x1="230" y1="245" x2="230" y2="259" marker-end="url(#ar)"/>
+    <line class="ed" x1="444" y1="245" x2="444" y2="259" marker-end="url(#ar)"/>
+    <line class="ed" x1="658" y1="245" x2="658" y2="259" marker-end="url(#ar)"/>
+    <line class="ed" x1="872" y1="245" x2="872" y2="259" marker-end="url(#ar)"/>
+    <line class="ed" x1="1086" y1="245" x2="1086" y2="259" marker-end="url(#ar)"/>
+
+    <rect class="b0" x="130" y="262" width="200" height="40" rx="8"/><text class="ht c0" x="230" y="280" text-anchor="middle">Level 0 · Dead end</text><text class="v2" x="230" y="296" text-anchor="middle">never buys</text>
+    <rect class="b1" x="344" y="262" width="200" height="40" rx="8"/><text class="ht c1" x="444" y="280" text-anchor="middle">Level 1 · Long shot</text><text class="v2" x="444" y="296" text-anchor="middle">teachers, no signal</text>
+    <rect class="b2" x="558" y="262" width="200" height="40" rx="8"/><text class="ht c2" x="658" y="280" text-anchor="middle">Level 2 · Discovery</text><text class="v2" x="658" y="296" text-anchor="middle">BDR finds the why-now</text>
+    <rect class="b3" x="772" y="262" width="200" height="40" rx="8"/><text class="ht c3" x="872" y="280" text-anchor="middle">Level 3 · First Touch</text><text class="v2" x="872" y="296" text-anchor="middle">leaders with a why-now</text>
+    <rect class="bo dash" x="986" y="262" width="200" height="40" rx="8"/><text class="ht co" x="1086" y="280" text-anchor="middle">Customer</text><text class="v2" x="1086" y="296" text-anchor="middle">existing account or deal</text>
+
+    <text class="lab" x="10" y="330">SEES</text><text class="v2" x="10" y="346">after submit</text>
+    <text class="lab" x="10" y="382">SALESFORCE</text>
+    <text class="lab" x="10" y="434">SLACK</text>
+    <text class="lab" x="10" y="486">EMAIL</text><text class="v2" x="10" y="502">in progress</text>
+
+    <rect class="bx" x="130" y="308" width="200" height="208" rx="8"/>
+    <rect class="bx" x="344" y="308" width="200" height="208" rx="8"/>
+    <rect class="bx" x="558" y="308" width="200" height="208" rx="8"/>
+    <rect class="bx" x="772" y="308" width="200" height="208" rx="8"/>
+    <rect class="bx dash" x="986" y="308" width="200" height="208" rx="8"/>
+    <g>
+      <line class="sep" x1="140" y1="360" x2="320" y2="360"/><line class="sep" x1="140" y1="412" x2="320" y2="412"/><line class="sep" x1="140" y1="464" x2="320" y2="464"/>
+      <line class="sep" x1="354" y1="360" x2="534" y2="360"/><line class="sep" x1="354" y1="412" x2="534" y2="412"/><line class="sep" x1="354" y1="464" x2="534" y2="464"/>
+      <line class="sep" x1="568" y1="360" x2="748" y2="360"/><line class="sep" x1="568" y1="412" x2="748" y2="412"/><line class="sep" x1="568" y1="464" x2="748" y2="464"/>
+      <line class="sep" x1="782" y1="360" x2="962" y2="360"/><line class="sep" x1="782" y1="412" x2="962" y2="412"/><line class="sep" x1="782" y1="464" x2="962" y2="464"/>
+      <line class="sep" x1="996" y1="360" x2="1176" y2="360"/><line class="sep" x1="996" y1="412" x2="1176" y2="412"/><line class="sep" x1="996" y1="464" x2="1176" y2="464"/>
+    </g>
+
+    <text class="v" x="230" y="330" text-anchor="middle">Thank-you page</text><text class="v2" x="230" y="346" text-anchor="middle">no calendar</text>
+    <text class="v" x="444" y="330" text-anchor="middle">Thank-you page</text><text class="v2" x="444" y="346" text-anchor="middle">+ loop in your principal</text>
+    <text class="v" x="658" y="330" text-anchor="middle">BDR's calendar</text><text class="v2" x="658" y="346" text-anchor="middle">Luis or Neftali, by state</text>
+    <text class="v" x="872" y="330" text-anchor="middle">GM's calendar</text><text class="v2" x="872" y="346" text-anchor="middle">First Touch owner, by state</text>
+    <text class="v" x="1086" y="330" text-anchor="middle">"Your contact will</text><text class="v" x="1086" y="346" text-anchor="middle">reach out shortly"</text>
+
+    <text class="v" x="230" y="382" text-anchor="middle">Contact + receipt</text><text class="v2" x="230" y="398" text-anchor="middle">not ready to call</text>
+    <text class="v" x="444" y="382" text-anchor="middle">Contact + receipt</text><text class="v2" x="444" y="398" text-anchor="middle">owned by state BDR</text>
+    <text class="v" x="658" y="382" text-anchor="middle">Contact + Task</text><text class="v2" x="658" y="398" text-anchor="middle">High priority, to the BDR</text>
+    <text class="v" x="872" y="382" text-anchor="middle">Contact + Task</text><text class="v2" x="872" y="398" text-anchor="middle">High priority, to the GM</text>
+    <text class="v" x="1086" y="382" text-anchor="middle">Contact + Task</text><text class="v2" x="1086" y="398" text-anchor="middle">to the owner</text>
+
+    <text class="v2" x="230" y="442" text-anchor="middle">none</text>
+    <text class="v2" x="444" y="442" text-anchor="middle">none</text>
+    <text class="v" x="658" y="434" text-anchor="middle">Team channel</text><text class="v2" x="658" y="450" text-anchor="middle">level, reason, Starbridge</text>
+    <text class="v" x="872" y="434" text-anchor="middle">Team channel</text><text class="v2" x="872" y="450" text-anchor="middle">+ who to add to the call</text>
+    <text class="v" x="1086" y="442" text-anchor="middle">Team channel</text>
+
+    <text class="v" x="230" y="486" text-anchor="middle">Thank-you</text><text class="v2" x="230" y="502" text-anchor="middle">no sequence</text>
+    <text class="v" x="444" y="486" text-anchor="middle">Qualifying questions</text><text class="v2" x="444" y="502" text-anchor="middle">reply goes to the BDR</text>
+    <text class="v" x="658" y="486" text-anchor="middle">BDR calendar link</text><text class="v2" x="658" y="502" text-anchor="middle">"if you haven't booked yet"</text>
+    <text class="v" x="872" y="486" text-anchor="middle">GM calendar link</text><text class="v2" x="872" y="502" text-anchor="middle">"if you haven't booked yet"</text>
+    <text class="v2" x="1086" y="494" text-anchor="middle">none, the owner writes</text>
+
+    <text class="lab" x="10" y="562">BOOKING</text><text class="v2" x="10" y="578">Levels 2 and 3</text>
+    <rect class="bx" x="130" y="538" width="310" height="52" rx="10"/>
+    <text class="v" x="285" y="560" text-anchor="middle">Lead picks a time</text><text class="v2" x="285" y="577" text-anchor="middle">Google booking page on our thank-you page</text>
+    <line class="ed" x1="440" y1="564" x2="477" y2="564" marker-end="url(#ar)"/>
+    <rect class="bx" x="480" y="538" width="330" height="52" rx="10"/>
+    <text class="v" x="645" y="560" text-anchor="middle">Event on the host's Google Calendar</text><text class="v2" x="645" y="577" text-anchor="middle">the lead gets an invite</text>
+    <line class="ed dash" x1="810" y1="564" x2="847" y2="564" marker-end="url(#ar)"/>
+    <rect class="bx dash" x="850" y="538" width="336" height="52" rx="10"/>
+    <text class="v" x="1018" y="560" text-anchor="middle">Salesforce Event (planned)</text><text class="v2" x="1018" y="577" text-anchor="middle">David's sync reads [FT] / [DC] in the title</text>
+  </svg>
+
+  <div class="rubric">
+    <section>
+      <div>
+        <h2><span class="tag to">First</span>Existing customers and open deals</h2>
+        <p>Go straight to the deal owner, then the account owner, on the school or its parent district. No calendar. <span class="why">Needs a Salesforce integration user from RevOps; until then they are scored like new leads.</span></p>
+      </div>
+      <div>
+        <h2><span class="tag t0">L0</span>Dead end</h2>
+        <p>Anyone who will never buy a district curriculum:</p>
+        <ul>
+          <li>parents and homeschoolers, students</li>
+          <li>vendors, sponsorship and conference pitches</li>
+          <li>press, politicians, universities, job seekers</li>
+          <li>high-school-only teachers (no K-8 grades)</li>
+          <li>anyone outside the US and Canada, nonsense</li>
+        </ul>
+      </div>
+      <div>
+        <h2><span class="tag t1">L1</span>Long shot</h2>
+        <p>A real K-8 educator with no buying power and no reason to switch now:</p>
+        <ul>
+          <li>teachers and interventionists with no evaluation, review or pilot signal, at a district that isn't Hot or Warm</li>
+          <li>"Other" roles with nothing to place them</li>
+        </ul>
+        <p class="why">A teacher's adoption answer alone doesn't lift them. Coaches and TOSAs never land here.</p>
+      </div>
+    </section>
+
+    <section>
+      <div>
+        <h2><span class="tag t2">L2</span>Discovery with the BDR</h2>
+        <p>A real chance, but without the decision maker or the why-now yet:</p>
+        <ul>
+          <li>champions without an active review: math/STEM director or coordinator, curriculum coordinator, MTSS, Title I, SpEd director, assistant principal</li>
+          <li>decision makers with no why-now at a district that isn't Hot or Warm</li>
+          <li>principals of one building in a larger district (outside NYC)</li>
+          <li>instructional coaches, math coaches and TOSAs, always, even with no signal</li>
+          <li>teachers who say their school is evaluating, previewing or piloting, or whose district is Hot or Warm</li>
+          <li>any Level 3 that falls under the floor</li>
+        </ul>
+        <p class="why">The call has two goals: the decision maker's name and the why-now. With both, the BDR books a First Touch.</p>
+      </div>
+    </section>
+
+    <section>
+      <div>
+        <h2><span class="tag t3">L3</span>First Touch with the GM</h2>
+        <ul>
+          <li>decision makers (superintendent, assistant superintendent, CAO, curriculum director, director of T&amp;L, district administrator) with any why-now: adopting SY26-27 or SY27-28; a Hot or Warm district or score 70+; "I'm not sure" at a Strong or Ideal fit district; a message about searching, reviewing, piloting or pricing</li>
+          <li>champions running an active review</li>
+          <li>coaches and TOSAs at a Hot or Warm district</li>
+          <li>anyone whose message says they sit on the adoption or pilot committee, or lead the review</li>
+          <li>principals who decide for the whole school: NYC, single-school districts, charters, privates</li>
+        </ul>
+      </div>
+      <p class="box fast"><b>Fast lane:</b> anyone who isn't a teacher, at a Hot district with 5,000+ students, adopting SY26-27 or SY27-28, skips Claude.</p>
+      <p class="box"><b>Floor:</b> Under $30k Total PARR, or a Starbridge score under 50, means Level 2 instead, whoever asks. No data, no floor.</p>
+    </section>
+  </div>
+
+  <div class="sig">
+    <table>
+      <tr><th>Signal</th><th>Effect</th></tr>
+      <tr><td>Message says evaluating, previewing, piloting, or asks for pricing</td><td>Why-now: teacher or coach → L2; decision maker or champion → L3</td></tr>
+      <tr><td>Message reveals a student, parent, vendor or nonsense</td><td>Level 0, whatever role was picked</td></tr>
+      <tr><td>Adoption answer SY26-27 or SY27-28</td><td>Counts only from decision makers and champions</td></tr>
+      <tr><td>Starbridge Blocked, or just committed to another program</td><td>Down one level</td></tr>
+    </table>
+    <div>
+      <h2>Tie-breakers</h2>
+      <ul>
+        <li>Decision maker, champion or coach torn between 2 and 3 → 3.</li>
+        <li>Teacher torn between 1 and 2 → 1, unless there's an evaluation signal or a hot district.</li>
+        <li>Teachers reach Level 3 only through committee membership or leading the review.</li>
+        <li>Every decision carries a one-line reason naming the deciding factor; it shows in Slack and on the Salesforce Task.</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer><span>Sources: RUBRIC.md, prompts/rubric.md (what Claude reads), lib/rules.ts and lib/config.ts in the inbound-flow repo.</span><span>Dashed = being built</span></footer>
+</div>
+</body>
+</html>

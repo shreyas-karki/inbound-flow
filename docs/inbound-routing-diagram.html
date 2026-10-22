@@ -1,0 +1,325 @@
+<title>Samples Inbound Routing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;800&display=swap">
+<style>
+/* Layout: one column. Section 1 is the yes/no flowchart with example-lead buttons that light up one path; section 2 is the level grid (who × signal). Print splits them onto separate pages. */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --fg: #172030;
+  --muted: #5d6879;
+  --line: #cfd6e0;
+  --q: #eef2f8;
+  --accent: #2563d9;
+  --l0: #6f7a8b;
+  --l1: #a8700c;
+  --l2: #2563d9;
+  --l3: #0f7d58;
+  --own: #8545cf;
+  --floor: #b4520f;
+  --body: "Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f141b; --surface: #171e28; --fg: #e5eaf1; --muted: #98a3b3; --line: #344050; --q: #1e2734;
+    --accent: #72a6ff; --l0: #9aa5b5; --l1: #e2ab45; --l2: #72a6ff; --l3: #4fcb98; --own: #bb8ff2; --floor: #f0a160;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f141b; --surface: #171e28; --fg: #e5eaf1; --muted: #98a3b3; --line: #344050; --q: #1e2734;
+  --accent: #72a6ff; --l0: #9aa5b5; --l1: #e2ab45; --l2: #72a6ff; --l3: #4fcb98; --own: #bb8ff2; --floor: #f0a160;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); margin: 0; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 36px 64px; display: grid; gap: 44px; }
+section { display: grid; gap: 16px; }
+h1 { margin: 0; font-size: clamp(28px, 4.6vw, 42px); font-weight: 800; line-height: 1.05; letter-spacing: -.02em; text-wrap: balance; }
+h2 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -.01em; }
+.lede { margin: 0; color: var(--muted); font-size: 16px; max-width: 64ch; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+
+/* example picker */
+.picker { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.picker span { font-size: 13px; color: var(--muted); margin-right: 4px; }
+.picker button { font: 500 13.5px var(--body); color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 99px; padding: 6px 13px; cursor: pointer; }
+.picker button:hover { border-color: var(--muted); }
+.picker button[aria-pressed="true"] { background: var(--fg); color: var(--surface); border-color: var(--fg); }
+.picker button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.story { min-height: 24px; margin: 0; font-size: 14.5px; color: var(--muted); }
+.story b { color: var(--fg); }
+
+.flowbox { overflow-x: auto; padding: 10px 6px; }
+.flowbox svg { display: block; width: 100%; min-width: 760px; height: auto; margin: 0 auto; }
+
+/* diagram */
+.fl text { font-family: var(--body); fill: var(--fg); }
+.fl .t { font-size: 15px; font-weight: 600; }
+.fl .s { font-size: 12px; fill: var(--muted); }
+.fl .yn { font-size: 12px; font-weight: 700; fill: var(--muted); }
+.fl .node rect { fill: var(--surface); stroke: var(--line); stroke-width: 1.4; }
+.fl .node.q rect { fill: var(--q); }
+.fl .node.dash rect { stroke-dasharray: 6 4; stroke: var(--muted); }
+.fl .qmark { fill: var(--fg); } .fl .qmt { fill: var(--surface); font-size: 12px; font-weight: 800; }
+.fl .node.lv0 rect { fill: color-mix(in srgb, var(--l0) 16%, var(--surface)); stroke: color-mix(in srgb, var(--l0) 55%, var(--surface)); }
+.fl .node.lv1 rect { fill: color-mix(in srgb, var(--l1) 16%, var(--surface)); stroke: color-mix(in srgb, var(--l1) 55%, var(--surface)); }
+.fl .node.lv2 rect { fill: color-mix(in srgb, var(--l2) 16%, var(--surface)); stroke: color-mix(in srgb, var(--l2) 55%, var(--surface)); }
+.fl .node.lv3 rect { fill: color-mix(in srgb, var(--l3) 16%, var(--surface)); stroke: color-mix(in srgb, var(--l3) 55%, var(--surface)); }
+.fl .node.lvo rect { fill: color-mix(in srgb, var(--own) 12%, var(--surface)); }
+.fl .lv0 .t { fill: var(--l0); } .fl .lv1 .t { fill: var(--l1); } .fl .lv2 .t { fill: var(--l2); } .fl .lv3 .t { fill: var(--l3); } .fl .lvo .t { fill: var(--own); }
+.fl .floorq rect { fill: color-mix(in srgb, var(--floor) 12%, var(--surface)); stroke: color-mix(in srgb, var(--floor) 50%, var(--surface)); }
+.fl .edge { fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-dasharray: 7 5; animation: march 1.6s linear infinite; }
+.fl .edge.solidline { animation: none; stroke-dasharray: none; }
+.fl .ah { fill: var(--muted); }
+@keyframes march { to { stroke-dashoffset: -24; } }
+
+/* tracing one lead */
+.fl.tracing .node, .fl.tracing .edge, .fl.tracing .yn { opacity: .22; transition: opacity .25s; }
+.fl.tracing .on { opacity: 1 !important; }
+.fl.tracing .edge.on { stroke: var(--fg); stroke-width: 2.6; }
+.fl.tracing .node.on rect { stroke: var(--fg); stroke-width: 2.2; }
+@media (prefers-reduced-motion: reduce) { .fl .edge { animation: none; } }
+
+/* grid */
+.legend4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.lg { border-radius: 10px; padding: 10px 12px; display: grid; gap: 2px; border-top: 4px solid; background: var(--surface); }
+.lg b { font-size: 15px; } .lg span { font-size: 13px; color: var(--muted); }
+.lg.k0 { border-color: var(--l0); } .lg.k1 { border-color: var(--l1); } .lg.k2 { border-color: var(--l2); } .lg.k3 { border-color: var(--l3); }
+.lg.k0 b { color: var(--l0); } .lg.k1 b { color: var(--l1); } .lg.k2 b { color: var(--l2); } .lg.k3 b { color: var(--l3); }
+.gridbox { overflow-x: auto; padding: 14px; }
+table.mx { border-collapse: separate; border-spacing: 5px; width: 100%; min-width: 760px; }
+.mx th { font-size: 12.5px; font-weight: 600; color: var(--muted); text-align: center; vertical-align: bottom; padding: 0 4px 6px; line-height: 1.3; }
+.mx th.corner { text-align: left; }
+.mx td.who { width: 25%; padding: 8px 10px 8px 0; vertical-align: middle; }
+.mx td.who b { display: block; font-size: 15px; }
+.mx td.who span { display: block; font-size: 12px; color: var(--muted); line-height: 1.35; }
+.mx td.c { text-align: center; vertical-align: middle; border-radius: 8px; padding: 10px 4px; font-weight: 800; font-size: 20px; }
+.mx td.c small { display: block; font-size: 11px; font-weight: 600; }
+.c0 { background: color-mix(in srgb, var(--l0) 18%, var(--surface)); color: var(--l0); }
+.c1 { background: color-mix(in srgb, var(--l1) 18%, var(--surface)); color: var(--l1); }
+.c2 { background: color-mix(in srgb, var(--l2) 18%, var(--surface)); color: var(--l2); }
+.c3 { background: color-mix(in srgb, var(--l3) 18%, var(--surface)); color: var(--l3); }
+.cmix { background: linear-gradient(135deg, color-mix(in srgb, var(--l1) 18%, var(--surface)) 50%, color-mix(in srgb, var(--l2) 18%, var(--surface)) 50%); color: var(--fg); }
+.mx td.span0 { text-align: left; font-size: 14px; font-weight: 600; padding-left: 14px; }
+.rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.rule { border-left: 3px solid; border-radius: 0 8px 8px 0; padding: 9px 12px; background: var(--surface); display: grid; gap: 2px; font-size: 13.5px; }
+.rule b { font-size: 14px; }
+.rule span { color: var(--muted); }
+.rule.f { border-color: var(--floor); } .rule.d { border-color: var(--l0); } .rule.o { border-color: var(--own); }
+footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
+
+@media (max-width: 760px) { .legend4, .rules { grid-template-columns: 1fr 1fr; } }
+
+/* print: light, no buttons; #flow or #levels in the URL picks one page */
+@media print {
+  :root { --bg: #fff; color-scheme: light; }
+  html { zoom: .78; }
+  body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .wrap { padding-block: 0; gap: 18px; max-width: none; }
+  .picker, .story, footer { display: none; }
+  .fl .edge { animation: none; }
+  .card { border: 0; }
+  .print-flow #levels, .print-levels #flow { display: none; }
+  html.print-flow { zoom: .98; }
+  html.print-levels { zoom: .8; }
+  .legend4 { grid-template-columns: repeat(4, 1fr); }
+  .rules { grid-template-columns: repeat(3, 1fr); }
+}
+@page { size: letter; margin: 0.45in; }
+</style>
+
+<div class="wrap">
+  <section id="flow">
+    <h1>Samples Inbound Routing</h1>
+    <p class="lede">What happens when someone requests Thinking Math! samples. Every request takes one path through these questions, automatically, in about two seconds.</p>
+
+    <div class="picker" role="group" aria-label="Follow an example lead">
+      <span>Follow a lead:</span>
+      <button type="button" data-ex="parent" aria-pressed="false">A parent</button>
+      <button type="button" data-ex="teacher" aria-pressed="false">A teacher, no plans</button>
+      <button type="button" data-ex="coach" aria-pressed="false">An instructional coach</button>
+      <button type="button" data-ex="director" aria-pressed="false">A curriculum director adopting next year</button>
+      <button type="button" data-ex="small" aria-pressed="false">A principal of a 300-student district</button>
+      <button type="button" data-ex="customer" aria-pressed="false">An existing customer</button>
+    </div>
+    <p class="story" id="story" aria-live="polite">Pick an example to light up its path.</p>
+
+    <div class="card flowbox">
+      <svg class="fl" id="fl" viewBox="0 0 1000 890" role="img" aria-label="Flowchart: someone requests samples. If they are already a customer, their account owner reaches out. If they could never buy a district curriculum, they are Level 0 and get a thank-you page. Otherwise we look at who they are and why now: Level 1 gets a thank-you page and an email, Level 2 books a call with the BDR, Level 3 books with the growth manager, unless the district is small or scores low, which sends them to Level 2. Booked meetings land on Google Calendar and will be logged in Salesforce.">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+
+        <!-- edges (drawn first, under the nodes) -->
+        <path id="e-s-q1" class="edge" d="M380,76 L380,107" marker-end="url(#ar)"/>
+        <path id="e-q1-own" class="edge" d="M555,140 L637,140" marker-end="url(#ar)"/>
+        <text id="y-q1" class="yn" x="574" y="132">YES</text>
+        <path id="e-q1-q2" class="edge" d="M380,170 L380,207" marker-end="url(#ar)"/>
+        <text id="n-q1" class="yn" x="390" y="194">NO</text>
+        <path id="e-q2-o0" class="edge" d="M555,245 L637,245" marker-end="url(#ar)"/>
+        <text id="n-q2" class="yn" x="580" y="237">NO</text>
+        <path id="e-q2-q3" class="edge" d="M380,280 L380,317" marker-end="url(#ar)"/>
+        <text id="y-q2" class="yn" x="390" y="303">YES</text>
+        <path id="e-q3-l1" class="edge" d="M240,394 L240,450 L170,450 L170,497" marker-end="url(#ar)"/>
+        <path id="e-q3-l2" class="edge" d="M430,394 L430,497" marker-end="url(#ar)"/>
+        <path id="e-q3-q4" class="edge" d="M590,357 L800,357 L800,407" marker-end="url(#ar)"/>
+        <text class="yn" x="630" y="349">LOOKS LIKE LEVEL 3</text>
+        <path id="e-q4-l3" class="edge" d="M800,460 L800,497" marker-end="url(#ar)"/>
+        <text id="n-q4" class="yn" x="810" y="484">NO</text>
+        <path id="e-q4-l2" class="edge" d="M650,435 L490,435 L490,497" marker-end="url(#ar)"/>
+        <text id="y-q4" class="yn" x="560" y="427">YES</text>
+        <path id="e-l1-a1" class="edge" d="M170,560 L170,597" marker-end="url(#ar)"/>
+        <path id="e-l2-a2" class="edge" d="M460,560 L460,597" marker-end="url(#ar)"/>
+        <path id="e-l3-a3" class="edge" d="M800,560 L800,597" marker-end="url(#ar)"/>
+        <path id="e-a2-b1" class="edge" d="M460,660 L460,688 L560,688 L560,717" marker-end="url(#ar)"/>
+        <path id="e-a3-b1" class="edge" d="M800,660 L800,688 L700,688 L700,717" marker-end="url(#ar)"/>
+        <text class="yn" x="470" y="708">BOOKS</text><text class="yn" x="742" y="708">BOOKS</text>
+        <path id="e-b1-b2" class="edge" d="M630,776 L630,807" marker-end="url(#ar)"/>
+
+        <!-- nodes -->
+        <g id="S" class="node"><rect x="230" y="20" width="300" height="56" rx="12"/>
+          <text class="t" x="380" y="53" text-anchor="middle">Someone requests samples</text></g>
+
+        <g id="Q1" class="node q"><rect x="205" y="110" width="350" height="60" rx="30"/>
+          <circle class="qmark" cx="235" cy="140" r="11"/><text class="qmt" x="235" y="144" text-anchor="middle">?</text>
+          <text class="t" x="392" y="145" text-anchor="middle">Already a customer or in a deal?</text></g>
+
+        <g id="OWN" class="node lvo dash"><rect x="640" y="110" width="330" height="60" rx="12"/>
+          <text class="t" x="805" y="136" text-anchor="middle">Their account owner reaches out</text>
+          <text class="s" x="805" y="155" text-anchor="middle">coming soon: needs a Salesforce login</text></g>
+
+        <g id="Q2" class="node q"><rect x="205" y="210" width="350" height="70" rx="35"/>
+          <circle class="qmark" cx="235" cy="245" r="11"/><text class="qmt" x="235" y="249" text-anchor="middle">?</text>
+          <text class="t" x="392" y="241" text-anchor="middle">Could they ever buy a curriculum?</text>
+          <text class="s" x="392" y="260" text-anchor="middle">US or Canada · not a parent, student or vendor</text></g>
+
+        <g id="O0" class="node lv0"><rect x="640" y="215" width="330" height="60" rx="12"/>
+          <text class="t" x="805" y="241" text-anchor="middle">Level 0 · Not a buyer</text>
+          <text class="s" x="805" y="260" text-anchor="middle">thank-you page, no follow-up</text></g>
+
+        <g id="Q3" class="node q"><rect x="170" y="320" width="420" height="74" rx="37"/>
+          <circle class="qmark" cx="202" cy="357" r="11"/><text class="qmt" x="202" y="361" text-anchor="middle">?</text>
+          <text class="t" x="392" y="352" text-anchor="middle">Who are they, and why now?</text>
+          <text class="s" x="392" y="372" text-anchor="middle">role · district activity · adoption year · their message</text></g>
+
+        <g id="Q4" class="node q floorq"><rect x="650" y="410" width="300" height="50" rx="25"/>
+          <text class="t" x="800" y="431" text-anchor="middle">Small district or low score?</text>
+          <text class="s" x="800" y="449" text-anchor="middle">under $30k PARR or score under 50</text></g>
+
+        <g id="L1" class="node lv1"><rect x="40" y="500" width="260" height="60" rx="12"/>
+          <text class="t" x="170" y="526" text-anchor="middle">Level 1 · Interested teacher</text>
+          <text class="s" x="170" y="545" text-anchor="middle">no sign the district is choosing</text></g>
+        <g id="L2" class="node lv2"><rect x="330" y="500" width="260" height="60" rx="12"/>
+          <text class="t" x="460" y="526" text-anchor="middle">Level 2 · Worth a quick call</text>
+          <text class="s" x="460" y="545" text-anchor="middle">close to the decision, no timeline</text></g>
+        <g id="L3" class="node lv3"><rect x="670" y="500" width="260" height="60" rx="12"/>
+          <text class="t" x="800" y="526" text-anchor="middle">Level 3 · Ready to talk</text>
+          <text class="s" x="800" y="545" text-anchor="middle">decides, with a reason to change</text></g>
+
+        <g id="A1" class="node"><rect x="40" y="600" width="260" height="60" rx="12"/>
+          <text class="t" x="170" y="626" text-anchor="middle">Thank-you page</text>
+          <text class="s" x="170" y="645" text-anchor="middle">+ an email with a few questions</text></g>
+        <g id="A2" class="node"><rect x="330" y="600" width="260" height="60" rx="12"/>
+          <text class="t" x="460" y="626" text-anchor="middle">BDR's calendar</text>
+          <text class="s" x="460" y="645" text-anchor="middle">Luis or Neftali · Slack alert + task</text></g>
+        <g id="A3" class="node"><rect x="670" y="600" width="260" height="60" rx="12"/>
+          <text class="t" x="800" y="626" text-anchor="middle">Growth manager's calendar</text>
+          <text class="s" x="800" y="645" text-anchor="middle">their state's GM · Slack alert + task</text></g>
+
+        <g id="B1" class="node"><rect x="480" y="720" width="300" height="56" rx="12"/>
+          <text class="t" x="630" y="753" text-anchor="middle">Meeting lands on Google Calendar</text></g>
+        <g id="B2" class="node dash"><rect x="480" y="810" width="300" height="56" rx="12"/>
+          <text class="t" x="630" y="835" text-anchor="middle">Logged in Salesforce</text>
+          <text class="s" x="630" y="853" text-anchor="middle">coming soon, with David</text></g>
+      </svg>
+    </div>
+  </section>
+
+  <section id="levels">
+    <h2>Inbound Lead Levels</h2>
+    <p class="lede">How "who are they, and why now?" turns into a level. Find the person's role on the left and their strongest signal across the top.</p>
+
+    <div class="legend4">
+      <div class="lg k0"><b>Level 0 · Not a buyer</b><span>Thank-you page, saved in Salesforce</span></div>
+      <div class="lg k1"><b>Level 1 · Interested teacher</b><span>Thank-you page + an email, no call</span></div>
+      <div class="lg k2"><b>Level 2 · Worth a quick call</b><span>Books with the BDR</span></div>
+      <div class="lg k3"><b>Level 3 · Ready to talk</b><span>Books with the growth manager</span></div>
+    </div>
+
+    <div class="card gridbox">
+      <table class="mx">
+        <tr>
+          <th class="corner">Who they are</th>
+          <th>No sign of change</th>
+          <th>District is actively shopping</th>
+          <th>Adopting in the next two school years</th>
+          <th>Message says reviewing, piloting or pricing</th>
+          <th>On the adoption committee</th>
+        </tr>
+        <tr>
+          <td class="who"><b>District leader</b><span>superintendent, curriculum director, CAO, T&amp;L director; principals who decide for their whole school</span></td>
+          <td class="c c2">2</td><td class="c c3">3</td><td class="c c3">3</td><td class="c c3">3</td><td class="c c3">3</td>
+        </tr>
+        <tr>
+          <td class="who"><b>Program lead</b><span>math/STEM or curriculum coordinator, MTSS, Title I, SpEd director, assistant principal, principal of one school in a district</span></td>
+          <td class="c c2">2</td><td class="c c3">3</td><td class="c c3">3</td><td class="c c3">3</td><td class="c c3">3</td>
+        </tr>
+        <tr>
+          <td class="who"><b>Coach or TOSA</b><span>instructional and math coaches, teachers on special assignment</span></td>
+          <td class="c c2">2</td><td class="c c3">3</td><td class="c c2">2</td><td class="c c2">2</td><td class="c c3">3</td>
+        </tr>
+        <tr>
+          <td class="who"><b>Teacher</b><span>classroom, special ed, interventionists</span></td>
+          <td class="c c1">1</td><td class="c c2">2</td><td class="c cmix">1–2<small>being settled</small></td><td class="c c2">2</td><td class="c c3">3</td>
+        </tr>
+        <tr>
+          <td class="who"><b>Not a buyer</b><span>whatever role they picked</span></td>
+          <td class="c c0 span0" colspan="5">Level 0 · parents, students, vendors, press, high-school-only teachers, anyone outside the US and Canada</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="rules">
+      <div class="rule f"><b>Small districts start with the BDR</b><span>Under $30k PARR or a district score under 50: any 3 becomes a 2.</span></div>
+      <div class="rule d"><b>Just picked another curriculum</b><span>If the district just committed elsewhere, the lead drops one level.</span></div>
+      <div class="rule o"><b>Existing customers skip the grid</b><span>They go to their account owner (coming soon).</span></div>
+    </div>
+  </section>
+
+  <footer>Built from the rules Claude follows (prompts/rubric.md) and the hard rules in lib/rules.ts, inbound-flow repo. Live as of Oct 15, 2026.</footer>
+</div>
+
+<script>
+(function () {
+  if (location.hash === "#print-flow") document.documentElement.classList.add("print-flow");
+  if (location.hash === "#print-levels") document.documentElement.classList.add("print-levels");
+
+  var paths = {
+    parent:   { on: ["S","e-s-q1","Q1","e-q1-q2","n-q1","Q2","e-q2-o0","n-q2","O0"], text: "<b>A parent</b> could never buy a district curriculum, so they're Level 0: a thank-you page and nothing else." },
+    teacher:  { on: ["S","e-s-q1","Q1","e-q1-q2","n-q1","Q2","e-q2-q3","y-q2","Q3","e-q3-l1","L1","e-l1-a1","A1"], text: "<b>A teacher with no plans</b> at a quiet district is Level 1: a thank-you page asking them to loop in their principal, and an email." },
+    coach:    { on: ["S","e-s-q1","Q1","e-q1-q2","n-q1","Q2","e-q2-q3","y-q2","Q3","e-q3-l2","L2","e-l2-a2","A2","e-a2-b1","B1","e-b1-b2","B2"], text: "<b>An instructional coach</b> always gets at least a call with the BDR, who can find the decision maker." },
+    director: { on: ["S","e-s-q1","Q1","e-q1-q2","n-q1","Q2","e-q2-q3","y-q2","Q3","e-q3-q4","Q4","e-q4-l3","n-q4","L3","e-l3-a3","A3","e-a3-b1","B1","e-b1-b2","B2"], text: "<b>A curriculum director adopting next year</b> decides and has a reason to change: Level 3, straight to the growth manager's calendar." },
+    small:    { on: ["S","e-s-q1","Q1","e-q1-q2","n-q1","Q2","e-q2-q3","y-q2","Q3","e-q3-q4","Q4","e-q4-l2","y-q4","L2","e-l2-a2","A2","e-a2-b1","B1","e-b1-b2","B2"], text: "<b>A principal of a 300-student district</b> looks like Level 3, but the district is small, so they start with the BDR." },
+    customer: { on: ["S","e-s-q1","Q1","e-q1-own","y-q1","OWN"], text: "<b>An existing customer</b> goes straight to their account owner. This step goes live once RevOps gives us a Salesforce login." }
+  };
+  var svg = document.getElementById("fl");
+  var story = document.getElementById("story");
+  var buttons = document.querySelectorAll(".picker button");
+  var current = null;
+
+  function show(key) {
+    svg.querySelectorAll(".on").forEach(function (el) { el.classList.remove("on"); });
+    buttons.forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.ex === key)); });
+    if (!key) { svg.classList.remove("tracing"); story.textContent = "Pick an example to light up its path."; current = null; return; }
+    paths[key].on.forEach(function (id) { var el = document.getElementById(id); if (el) el.classList.add("on"); });
+    svg.classList.add("tracing");
+    story.innerHTML = paths[key].text;
+    current = key;
+  }
+  buttons.forEach(function (b) {
+    b.addEventListener("click", function () { show(current === b.dataset.ex ? null : b.dataset.ex); });
+  });
+})();
+</script>
