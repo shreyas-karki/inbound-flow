@@ -4,6 +4,7 @@
 import { embeddable, EMPTY_TABLES, loadRoutingTables, resolveHost, resolveState, type RoutingTables } from "./calendars";
 import { config } from "./config";
 import { decideOnce, decisionKey, defaultStore, DECISION_TTL_SEC, FALLBACK_TTL_SEC, type Store } from "./decisions";
+import { waitForHandoff } from "./handoff";
 import { addToOutbox } from "./outbox";
 import { applyRules, capFirstTouch, isInternalTest, liftLargeDistrict, meetingForLevel } from "./rules";
 import { createSalesforce, emailDomain, type SalesforceClient } from "./salesforce";
@@ -27,6 +28,10 @@ export interface Deps {
   routing: () => Promise<RoutingTables>;
   store: Store;
   actionsOwner?: "app" | "make"; // defaults to config.actionsOwner
+  /** Make's Salesforce read, when Make is the caller (lib/handoff.ts). */
+  handoff?: SfContext;
+  /** How long the page waits for Make's handoff. Defaults to config.handoffWaitMs when Make acts, else 0. */
+  handoffWaitMs?: number;
 }
 
 export function defaultDeps(): Deps {
@@ -81,7 +86,7 @@ export async function decide(sub: Submission, deps: Deps): Promise<Decided> {
   // The routing sheet loads alongside the lookups; it's cached, so this is usually instant.
   const tables = deps.routing().catch(() => EMPTY_TABLES);
 
-  const salesforce = time("salesforce_lookup", () => deps.salesforce.lookup(sub)).catch((err): SfContext => {
+  const salesforce = time("salesforce_lookup", () => lookupSalesforce(sub, deps)).catch((err): SfContext => {
     errors.push(`salesforce_lookup: ${msg(err)}`);
     return { matchedBy: "none" };
   });
@@ -104,6 +109,13 @@ export async function decide(sub: Submission, deps: Deps): Promise<Decided> {
   const state = resolveState(sub, sf, sb);
   const host = resolveHost(decision, state, sf, await time("routing_sheet", () => tables));
   return { sf, sb, decision, state, host, next: nextStep(decision, host), timings, errors };
+}
+
+/** Make's handoff when Make sent one (or sends it within the wait), otherwise the app's own lookup. */
+async function lookupSalesforce(sub: Submission, deps: Deps): Promise<SfContext> {
+  const waitMs = deps.handoffWaitMs ?? ((deps.actionsOwner ?? config.actionsOwner) === "make" ? config.handoffWaitMs : 0);
+  const handed = deps.handoff ?? (await waitForHandoff(deps.store, sub.email, { waitMs }));
+  return handed ?? deps.salesforce.lookup(sub);
 }
 
 /** decide(), but once per lead: the browser and Make share the first caller's answer. */
@@ -200,7 +212,9 @@ export async function handleSubmission(raw: unknown, deps: Deps = defaultDeps())
       host: host.name,
       host_source: host.source,
       sf_match: sf.matchedBy,
+      sf_source: sf.source ?? "app",
       sf_account: sf.account?.name,
+      sf_owner: sf.existingOwner?.name,
       sf_write: write.action,
       sf_payload: write.payload,
       starbridge: sb,

@@ -68,6 +68,9 @@ export const config = {
   // Who acts on a decision. "app": this app writes Salesforce, posts to Slack and drafts the AI reply.
   // "make": the Make scenario does all of that from /api/tier's answer, and this app only decides and logs.
   actionsOwner: (env("ACTIONS_OWNER", "app") === "make" ? "make" : "app") as "app" | "make",
+  // When Make acts, it also reads Salesforce and hands it over on /api/tier (lib/handoff.ts). The page waits
+  // this long for that handoff, alongside Starbridge, before deciding without it.
+  handoffWaitMs: Number(env("HANDOFF_WAIT_MS", "6000")),
   // Shared secret Make sends in the x-inbound-secret header. /api/tier refuses every call when unset.
   tierSecret: env("TIER_SECRET"),
 

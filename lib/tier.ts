@@ -3,6 +3,7 @@
 // something Make can route on, so a lead is never dropped; failures become Level 2 with fallback: true.
 import { timingSafeEqual } from "node:crypto";
 import { config } from "./config";
+import { saveHandoff, toSfContext } from "./handoff";
 import { decideLead, defaultDeps, log, parseSubmission, type Decided, type Deps } from "./router";
 import { isDecisionMaker, isInternalTest } from "./rules";
 import { buildSlackHeader, buildSlackMessage } from "./slack";
@@ -14,11 +15,15 @@ export interface TierResponse {
   body: Record<string, unknown>;
 }
 
-/** What Make sends: the webhook's data.json (an object, or the raw JSON string) plus page fields from the bundle. */
+/**
+ * What Make sends: the webhook's data.json (an object, or the raw JSON string) plus page fields from the bundle,
+ * and what Make found in Salesforce for this lead (lib/handoff.ts), as an object or a JSON string.
+ */
 interface TierRequest {
   data?: unknown;
   page_url?: string;
   page_name?: string;
+  salesforce?: unknown;
 }
 
 export async function handleTier(secret: string | undefined, raw: unknown, deps: Deps = defaultDeps(), expected = config.tierSecret): Promise<TierResponse> {
@@ -36,12 +41,16 @@ export async function handleTier(secret: string | undefined, raw: unknown, deps:
   const sub = parsed.data;
 
   try {
-    const { value, cached } = await decideLead(sub, deps);
+    // Park Make's Salesforce read for the lead's browser, which may be waiting on it right now, and use it here too.
+    const handoff = req.salesforce === undefined ? undefined : toSfContext(typeof req.salesforce === "string" ? safeJson(req.salesforce) : req.salesforce);
+    if (handoff) await saveHandoff(deps.store, sub.email, handoff);
+    const { value, cached } = await decideLead(sub, handoff ? { ...deps, handoff } : deps);
     const body = tierBody(sub, value, cached);
     log({
       event: "tier", caller: "make", cached, email: sub.email, role: sub.job_title, school: sub.school, state: value.state,
       level: value.decision.level, route: value.decision.route, source: value.decision.source, reason: value.decision.reason,
       host: value.host.name, host_source: value.host.source, page_name: req.page_name,
+      sf_source: value.sf.source ?? "app", sf_handoff: Boolean(handoff), sf_owner: value.sf.existingOwner?.name,
       timings: value.timings, errors: value.errors, total_ms: Date.now() - started,
     });
     return { status: 200, body };
@@ -78,7 +87,8 @@ export function tierBody(sub: Submission, d: Decided, cached: boolean): Record<s
     sf_contact_id: sf.contact?.id ?? null,
     sf_account_id: sf.account?.id ?? null,
     sf_match: sf.matchedBy,
-    open_opp_id: sf.openOpportunity?.id ?? null,
+    sf_source: sf.source ?? "app",
+    open_opp_id: sf.openOpportunity?.id ?? sf.existingOwner?.oppId ?? null,
     slack_text: buildSlackMessage(sub, sf, sb, decision, next, { host, state: d.state }),
     // Just the level, reason, calendar and Starbridge, for Make to put on top of its usual post.
     slack_header: buildSlackHeader(sub, sb, decision, next, host),
@@ -96,7 +106,7 @@ function fallback(sub: Submission | undefined, reason: string): Record<string, u
     internal_test: sub ? isInternalTest(sub.email) : false, decision_maker: sub ? isDecisionMaker(sub.job_title) : false, state: null,
     host_name: null, host_user_id: null, host_source: null, also_add: "", booking_url: null,
     starbridge_score: null, starbridge_fit: null, starbridge_signal: null, starbridge_summary: null,
-    sf_contact_id: null, sf_account_id: null, sf_match: "none", open_opp_id: null,
+    sf_contact_id: null, sf_account_id: null, sf_match: "none", sf_source: null, open_opp_id: null,
     slack_text: `:warning: *Level 2 by default* · ${who}\n_${reason}_`,
     slack_header: `:warning: *Level 2 by default* (router unavailable) · New physical sample request :package:\n_${reason}_`,
     cached: false, errors: [reason], timings: {},

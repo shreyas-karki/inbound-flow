@@ -49,6 +49,9 @@ export interface SfContext {
     parr?: number; // Total PARR (USD) of the lead's district: Total_PARR__c, the "Total Account PARR" in Slack
   };
   openOpportunity?: { id: string; stage: string; ownerId?: string; ownerName?: string; typeOfSale?: string };
+  // From Make's check (lib/handoff.ts): an active deal, open renewal or recent Closed Won on the school, district or contact's account.
+  existingOwner?: { id?: string; name?: string; why: string; oppId?: string; stage?: string };
+  source?: "make" | "app"; // who read Salesforce; unset means the app's own lookup
   accountCandidates?: string[]; // when the district name was ambiguous
   recordUrl?: string;
 }

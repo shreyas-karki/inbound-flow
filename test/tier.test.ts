@@ -117,8 +117,8 @@ describe("/api/tier", () => {
   });
 
   it("with ACTIONS_OWNER=make the page decides but never writes Salesforce, posts to Slack or drafts", async () => {
-    const { d, calls } = deps({ actionsOwner: "make" });
-    const out = await handleSubmission({ ...fixture("level3").data }, d);
+    const { d, calls } = deps({ actionsOwner: "make", handoffWaitMs: 0 }); // no Make handoff in this test (see handoff.test.ts)
+    const out = await handleSubmission({ ...fixture("level3").data },d);
     await out.background;
     expect(out.body.level).toBe(3);
     expect(out.body.next).toMatchObject({ type: "calendar", host: "Melina Gruber" });

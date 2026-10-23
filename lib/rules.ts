@@ -3,6 +3,11 @@ import type { Decision, Level, RoleGroup, SfContext, StarbridgeResult, Submissio
 
 /** Clear-cut cases decided without AI. Returns null when Claude should score. */
 export function applyRules(sub: Submission, sf: SfContext, sb?: StarbridgeResult): Decision | null {
+  if (sf.existingOwner) {
+    const name = sf.existingOwner.name ?? "the account owner";
+    return { level: 3, route: "owner", ownerName: sf.existingOwner.name, reason: `${sf.existingOwner.why}. Routed to ${name}.`, source: "rules" };
+  }
+
   const label = sf.account?.label?.toUpperCase();
   if (label && rulesConfig.customerLabels.includes(label)) {
     return {

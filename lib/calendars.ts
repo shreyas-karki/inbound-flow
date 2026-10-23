@@ -32,10 +32,11 @@ export function resolveHost(decision: Decision, state: string | undefined, sf: S
 
   // Existing customer or open deal: the deal owner first, then the account owner. They reach out; no calendar.
   if (decision.route === "owner") {
+    const owner = sf.existingOwner;
     const opp = sf.openOpportunity;
     return {
-      name: opp?.ownerName ?? sf.account?.ownerName ?? decision.ownerName ?? "Your Innovamat contact",
-      userId: opp?.ownerId ?? sf.account?.ownerId,
+      name: owner?.name ?? opp?.ownerName ?? sf.account?.ownerName ?? decision.ownerName ?? "Your Innovamat contact",
+      userId: owner?.id ?? opp?.ownerId ?? sf.account?.ownerId,
       alsoAdd: [],
       source: "salesforce",
     };
