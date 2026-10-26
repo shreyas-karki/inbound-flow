@@ -49,7 +49,7 @@ The first thing we need from any lead is the WHY NOW: why this district would ch
 **Level 2: Discovery.**
 - A `decision_maker` or `champion` with no WHY NOW at a district that isn't hot.
 - Any other `coach`, even with no signal at all: they can book directly with a BDR.
-- An `end_user` whose message says their school is evaluating, previewing, piloting or reviewing, or whose district is hot or adopting soon.
+- An `end_user` whose message says their school is evaluating, previewing, piloting or reviewing, or whose district is hot. Their own adoption answer (even `SY26-27` or `SY27-28`) is not enough.
 
 **Level 1: Long shot.**
 - An `end_user` with no evaluation signal in the message, at a district that is not hot. Adopting soon on its own does not lift a teacher out of Level 1.

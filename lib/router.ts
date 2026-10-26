@@ -6,7 +6,7 @@ import { config } from "./config";
 import { decideOnce, decisionKey, defaultStore, DECISION_TTL_SEC, FALLBACK_TTL_SEC, type Store } from "./decisions";
 import { waitForHandoff } from "./handoff";
 import { addToOutbox } from "./outbox";
-import { applyRules, capFirstTouch, isInternalTest, liftLargeDistrict, meetingForLevel } from "./rules";
+import { applyRules, capFirstTouch, capTeacherWithoutSignal, isInternalTest, liftLargeDistrict, meetingForLevel } from "./rules";
 import { createSalesforce, emailDomain, type SalesforceClient } from "./salesforce";
 import { claudeScorer, mockScorer, scoreWithFallback, type Scorer } from "./score";
 import { claudeDrafter, draftWithFallback, mockDrafter, type Drafter } from "./sdr";
@@ -104,7 +104,7 @@ export async function decide(sub: Submission, deps: Deps): Promise<Decided> {
 
   const ruled = applyRules(sub, sf, sb);
   const scored: Decision = ruled ? { ...ruled, meeting: ruled.route === "owner" ? undefined : meetingForLevel(ruled.level) } : await time("scoring", () => scoreWithFallback(deps.scorer, sub, sf, sb));
-  const decision = liftLargeDistrict(capFirstTouch(scored, sf, sb), sf);
+  const decision = liftLargeDistrict(capFirstTouch(capTeacherWithoutSignal(scored, sub, sb), sf, sb), sf);
 
   const state = resolveState(sub, sf, sb);
   const host = resolveHost(decision, state, sf, await time("routing_sheet", () => tables));

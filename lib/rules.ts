@@ -72,6 +72,16 @@ export function capFirstTouch(decision: Decision, sf: SfContext, sb: StarbridgeR
   return { ...decision, level: 2, route: "bdr", meeting: "discovery", reason: `${decision.reason} Capped at Discovery: ${why}.` };
 }
 
+/**
+ * Backstop for Claude: a teacher with no message and no hot district has no signal beyond their own adoption
+ * answer, so the rubric keeps them at Level 1. Runs before the PARR rules, so a very large district still lifts them.
+ */
+export function capTeacherWithoutSignal(decision: Decision, sub: Submission, sb: StarbridgeResult): Decision {
+  if (decision.source !== "claude" || decision.level < 2 || roleGroup(sub.job_title) !== "end_user") return decision;
+  if (sub.needs.trim() || isHotDistrict(sb)) return decision;
+  return { ...decision, level: 1, route: routeForLevel(1), meeting: meetingForLevel(1), reason: `${decision.reason} Kept at Level 1: a teacher's adoption date alone isn't a signal.` };
+}
+
 /** Runs after the First Touch floor: a Level 1 lead at a very large district becomes a BDR Discovery. */
 export function liftLargeDistrict(decision: Decision, sf: SfContext): Decision {
   const parr = sf.account?.parr;

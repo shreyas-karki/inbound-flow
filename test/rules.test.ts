@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyRules, capFirstTouch, liftLargeDistrict } from "../lib/rules";
+import { applyRules, capFirstTouch, capTeacherWithoutSignal, liftLargeDistrict } from "../lib/rules";
 import { SubmissionSchema, type Decision, type SfContext, type StarbridgeResult } from "../lib/types";
 
 const sub = (over: Record<string, unknown> = {}) =>
@@ -86,6 +86,27 @@ describe("First Touch floor", () => {
     expect(capFirstTouch(firstTouch, { matchedBy: "none" }, { source: "timeout" })).toBe(firstTouch);
     const owner: Decision = { level: 3, route: "owner", reason: "Existing customer.", source: "rules" };
     expect(capFirstTouch(owner, sf(100), sb({ score: 10 }))).toBe(owner);
+  });
+});
+
+describe("Teacher with no signal", () => {
+  // Jessica Jones, Oct 26: teacher, SY26-27, no message, no Starbridge match. Claude returned Level 2 while its reason said Level 1.
+  const level2: Decision = { level: 2, route: "bdr", meeting: "discovery", reason: "Teacher reporting adoption in SY26-27 at a non-hot account.", source: "claude" };
+  const none: StarbridgeResult = { source: "starbridge" }; // no Starbridge match
+  const hot: StarbridgeResult = { source: "starbridge", account: { score: 80, fitBand: "Strong", signalBand: "Hot", fitSummary: "", signalSummary: "" } as NonNullable<StarbridgeResult["account"]> };
+
+  it("keeps a teacher adopting soon with no message and no hot district at Level 1", () => {
+    expect(capTeacherWithoutSignal(level2, sub({ adoption_timeline: "SY26-27" }), none)).toMatchObject({
+      level: 1, route: "email", meeting: undefined, reason: expect.stringContaining("Kept at Level 1"),
+    });
+  });
+
+  it("trusts Claude when there's a message or a hot district, and leaves other roles and the fallback alone", () => {
+    expect(capTeacherWithoutSignal(level2, sub({ needs: "We're piloting new math programs" }), none)).toBe(level2);
+    expect(capTeacherWithoutSignal(level2, sub(), hot)).toBe(level2);
+    expect(capTeacherWithoutSignal(level2, sub({ job_title: "Principal" }), none)).toBe(level2);
+    const fallback: Decision = { ...level2, source: "fallback" };
+    expect(capTeacherWithoutSignal(fallback, sub(), none)).toBe(fallback);
   });
 });
 
