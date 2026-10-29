@@ -63,7 +63,7 @@ export async function handleTier(secret: string | undefined, raw: unknown, deps:
 
 /** Flat and null-filled, so every field always exists for Make's mapping. */
 export function tierBody(sub: Submission, d: Decided, cached: boolean): Record<string, unknown> {
-  const { sf, sb, decision, host, next } = d;
+  const { sf, sb, decision, host, team, next } = d;
   return {
     ok: true,
     level: decision.level,
@@ -80,6 +80,10 @@ export function tierBody(sub: Submission, d: Decided, cached: boolean): Record<s
     host_source: host.source,
     also_add: host.alsoAdd.join(", "),
     booking_url: next.type === "calendar" ? next.url ?? null : null,
+    // The state's team from State_GM_owner, whatever the level.
+    state_gm: team?.gm ?? null,
+    state_contributors: team?.contributors.join(", ") ?? "",
+    discovery_owner: team?.discovery ?? null,
     starbridge_score: sb.account?.score ?? null,
     starbridge_fit: sb.account?.fitBand ?? null,
     starbridge_signal: sb.account?.signalBand ?? null,
@@ -89,9 +93,9 @@ export function tierBody(sub: Submission, d: Decided, cached: boolean): Record<s
     sf_match: sf.matchedBy,
     sf_source: sf.source ?? "app",
     open_opp_id: sf.openOpportunity?.id ?? sf.existingOwner?.oppId ?? null,
-    slack_text: buildSlackMessage(sub, sf, sb, decision, next, { host, state: d.state }),
+    slack_text: buildSlackMessage(sub, sf, sb, decision, next, { host, team, state: d.state }),
     // Just the level, reason, calendar and Starbridge, for Make to put on top of its usual post.
-    slack_header: buildSlackHeader(sub, sb, decision, next, host),
+    slack_header: buildSlackHeader(sub, sb, decision, next, host, team),
     cached,
     // What went wrong along the way (e.g. a Salesforce login failure), and how long each step took, in ms.
     errors: d.errors,
@@ -105,6 +109,7 @@ function fallback(sub: Submission | undefined, reason: string): Record<string, u
     ok: true, level: 2, route: "bdr", meeting: "discovery", reason, source: "fallback", fallback: true,
     internal_test: sub ? isInternalTest(sub.email) : false, decision_maker: sub ? isDecisionMaker(sub.job_title) : false, state: null,
     host_name: null, host_user_id: null, host_source: null, also_add: "", booking_url: null,
+    state_gm: null, state_contributors: "", discovery_owner: null,
     starbridge_score: null, starbridge_fit: null, starbridge_signal: null, starbridge_summary: null,
     sf_contact_id: null, sf_account_id: null, sf_match: "none", sf_source: null, open_opp_id: null,
     slack_text: `:warning: *Level 2 by default* · ${who}\n_${reason}_`,

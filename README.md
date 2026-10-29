@@ -52,13 +52,17 @@ For the A/B test (steps in [LAUNCH.md](LAUNCH.md)), a new Make scenario receives
 
 "US - Mapping Owners for Inbounds", each tab published to the web as CSV and cached for 10 minutes (`lib/calendars.ts`):
 
+**`State_GM_owner` is the source of truth** (since Oct 28): each state's Owner (the State GM), Contributors and Discovery BDR. Edit that tab only. The app reads it through `ft_owners`, which is a formula copy of it, so nothing new needs publishing.
+
 | Tab | Env var | Used for |
 |---|---|---|
-| `Mapping` (US State, Owner, User Long ID, …) | `SHEET_MAPPING_CSV_URL` | Levels 0-2: the state's BDR. Level 2 books on their calendar. |
-| `ft_owners` (State, Owner, Owner ID, Also add) | `SHEET_FT_OWNERS_CSV_URL` | Level 3: the state's First Touch owner, plus who to add to the call |
+| `ft_owners` (State, Owner, Owner ID, Also add, Discovery, Discovery ID) | `SHEET_FT_OWNERS_CSV_URL` | Level 3: the State GM's calendar, contributors added to the call. Levels 0-2: the Discovery BDR. |
+| `Mapping` (US State, Owner, User Long ID, …) | `SHEET_MAPPING_CSV_URL` | Levels 0-2 only for a state with no Discovery name |
 | `calendar_links` (SF Long ID, SF Name, Calendar Link) | `SHEET_CALENDARS_CSV_URL` | Each person's Google appointment page, found by user ID, then by full name |
 
 - **The lead's state** comes from the form, then the Salesforce district's "(City, ST)", then Starbridge. A state without a row uses the `Other` row.
+- **A State GM with no calendar yet:** Level 3 books on the first contributor who has one, and the GM is added to the call. If nobody does, the lead hears "someone will reach out".
+- **Calendar titles matter:** Salesforce logs a booking on "Let's Talk Math w/ Innovamat" as a First Touch and one on "Let's Talk Math" as a Discovery Meeting. The link in `calendar_links` must be each GM's 30-minute "Let's Talk Math w/ Innovamat" schedule.
 - **Links:** `calendar.app.google` short links are expanded automatically. Full links work with or without `/u/0/`. A person without a working link gets "someone will reach out" instead of a calendar.
 - **Careful:** Make scenario 172177 reads columns A and C of `Mapping`. Only add columns or tabs there.
 
@@ -86,7 +90,7 @@ api/tier.ts          Vercel function (POST /api/tier): Make asks for the decisio
 lib/router.ts        The pipeline (decide, then act), timings and logging
 lib/tier.ts          /api/tier: secret check, Make's response shape, fallback
 lib/decisions.ts     Decide once per lead (Upstash Redis or in memory)
-lib/calendars.ts     Routing sheet: state → BDR / First Touch owner → calendar
+lib/calendars.ts     Routing sheet: state → State GM / Discovery BDR → calendar
 lib/unbounce.ts      Unbounce field IDs → ours
 lib/salesforce.ts    Lookup + contact upsert (live and mock clients)
 lib/starbridge.ts    Starbridge Account Scoring lookup (Top Buyers bridge)

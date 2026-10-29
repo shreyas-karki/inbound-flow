@@ -1,7 +1,7 @@
 // The pipeline: Salesforce → Starbridge → rules/Claude → host and calendar (page responds here)
 // → in the background: Salesforce write, AI SDR reply draft, Slack, prototype inbox.
 // decide() is shared with /api/tier (lib/tier.ts), where Make asks for the same decision and does the acting itself.
-import { embeddable, EMPTY_TABLES, loadRoutingTables, resolveHost, resolveState, type RoutingTables } from "./calendars";
+import { embeddable, EMPTY_TABLES, loadRoutingTables, resolveHost, resolveState, stateTeam, type RoutingTables, type StateTeam } from "./calendars";
 import { config } from "./config";
 import { decideOnce, decisionKey, defaultStore, DECISION_TTL_SEC, FALLBACK_TTL_SEC, type Store } from "./decisions";
 import { waitForHandoff } from "./handoff";
@@ -61,6 +61,7 @@ export interface Decided {
   decision: Decision;
   state?: string;
   host: Host;
+  team?: StateTeam;
   next: NextStep;
   timings: Record<string, number>;
   errors: string[];
@@ -107,8 +108,9 @@ export async function decide(sub: Submission, deps: Deps): Promise<Decided> {
   const decision = liftLargeDistrict(capFirstTouch(capTeacherWithoutSignal(scored, sub, sb), sf, sb), sf);
 
   const state = resolveState(sub, sf, sb);
-  const host = resolveHost(decision, state, sf, await time("routing_sheet", () => tables));
-  return { sf, sb, decision, state, host, next: nextStep(decision, host), timings, errors };
+  const routing = await time("routing_sheet", () => tables);
+  const host = resolveHost(decision, state, sf, routing);
+  return { sf, sb, decision, state, host, team: stateTeam(state, routing), next: nextStep(decision, host), timings, errors };
 }
 
 /** Make's handoff when Make sent one (or sends it within the wait), otherwise the app's own lookup. */
@@ -174,7 +176,7 @@ export async function handleSubmission(raw: unknown, deps: Deps = defaultDeps())
       // Levels 0 and 1 need no sales action, and each post costs a BDR a read.
       if (decision.level >= 2) {
         try {
-          await time("slack", () => deps.slack(buildSlackMessage(sub, sf, sb, decision, next, { host, state: decided.state, write, draft })));
+          await time("slack", () => deps.slack(buildSlackMessage(sub, sf, sb, decision, next, { host, team: decided.team, state: decided.state, write, draft })));
         } catch (err) {
           errors.push(`slack: ${msg(err)}`);
         }

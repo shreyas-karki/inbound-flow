@@ -8,7 +8,7 @@ import { mockScorer, type Scorer } from "../lib/score";
 import { mockDrafter } from "../lib/sdr";
 import { lookupAccountScore } from "../lib/starbridge";
 import { handleTier } from "../lib/tier";
-import { IDS, TABLES } from "./fixtures/routing";
+import { GM_TABLES, IDS, TABLES } from "./fixtures/routing";
 
 const SECRET = "test-secret";
 const fixture = (name: string) => JSON.parse(readFileSync(join(__dirname, "fixtures", `unbounce-${name}.json`), "utf8"));
@@ -86,6 +86,16 @@ describe("/api/tier", () => {
     const out = await handleTier(SECRET, fixture("level3"), deps().d, SECRET);
     expect(out.body).toMatchObject({ also_add: "Neha", host_user_id: IDS.melina, decision_maker: true });
     expect(out.body.slack_text).toContain("Also add to the call: Neha");
+  });
+
+  it("Level 2 names the state's GM and contributors for the BDR, and returns the team to Make", async () => {
+    const f = fixture("level2");
+    const out = await handleTier(SECRET, { ...f, data: { ...f.data, state: ["Colorado"] } }, deps({ routing: async () => GM_TABLES }).d, SECRET);
+    expect(out.body).toMatchObject({
+      level: 2, host_name: "Neftali Cuevas", host_user_id: IDS.neftali,
+      state_gm: "Jason Potell", state_contributors: "Mariana Saravia", discovery_owner: "Neftali Cuevas",
+    });
+    expect(out.body.slack_header).toContain("Colorado GM: *Jason Potell* · Contributors: Mariana Saravia");
   });
 
   it("accepts data.json as a raw JSON string, the way Make may pass it", async () => {

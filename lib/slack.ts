@@ -1,3 +1,4 @@
+import type { StateTeam } from "./calendars";
 import { config } from "./config";
 import { isInternalTest } from "./rules";
 import { describeScore } from "./starbridge";
@@ -8,6 +9,7 @@ const LEVEL_NAME = { 0: "Dead end", 1: "Long shot", 2: "Discovery", 3: "First To
 
 export interface SlackExtras {
   host?: Host;
+  team?: StateTeam;
   /** The lead's state as resolved by the router (form, Salesforce or Starbridge). */
   state?: string;
   /** Omitted when Make does the Salesforce write: the message then just links the record it found. */
@@ -19,12 +21,13 @@ export interface SlackExtras {
  * The decision part of a post: level, reason, who and which calendar, Starbridge. Make puts this on top of
  * 172177's usual "New physical sample request" body, so the team sees the same post they know plus the level.
  */
-export function buildSlackHeader(sub: Submission, sb: StarbridgeResult, decision: Decision, next: NextStep, host?: Host): string {
+export function buildSlackHeader(sub: Submission, sb: StarbridgeResult, decision: Decision, next: NextStep, host?: Host, team?: StateTeam): string {
   const hostName = host?.name ?? (decision.route === "gm" ? config.routing.gmName : config.routing.bdrName);
   const label = decision.route === "owner" ? "Existing account" : LEVEL_NAME[decision.level];
+  const standIn = host?.standInFor ? ` (${host.standInFor}, the state GM, has no calendar yet)` : "";
   const routeLine = {
     owner: `:handshake: Routed to *${host?.name ?? decision.ownerName ?? "account owner"}* (existing account/deal). Please follow up.`,
-    gm: next.type === "calendar" ? `:calendar: *First Touch*: shown *${next.host}*'s calendar. Watch for the booking.` : `:warning: No calendar link for *${hostName}*. Reach out to book a First Touch.`,
+    gm: next.type === "calendar" ? `:calendar: *First Touch*: shown *${next.host}*'s calendar${standIn}. Watch for the booking.` : `:warning: No calendar link for *${hostName}*. Reach out to book a First Touch.`,
     bdr: next.type === "calendar" ? `:calendar: *Discovery*: shown *${next.host}*'s calendar. Watch for the booking.` : `:warning: No calendar link for *${hostName}*. Reach out to book a Discovery call.`,
     email: `:email: No meeting yet: they get an email asking who picks math curriculum.`,
   }[decision.route];
@@ -33,13 +36,15 @@ export function buildSlackHeader(sub: Submission, sb: StarbridgeResult, decision
     `_${decision.reason}_ (${decision.source})`,
     routeLine,
     host?.alsoAdd.length ? `:busts_in_silhouette: Also add to the call: ${host.alsoAdd.join(", ")}` : undefined,
+    // A Discovery lead still belongs to a growth manager's state: name them so the BDR knows who to loop in.
+    decision.route === "bdr" && team ? `:bust_in_silhouette: ${team.state} GM: *${team.gm}*${team.contributors.length ? ` · Contributors: ${team.contributors.join(", ")}` : ""}` : undefined,
     `:bar_chart: Starbridge: ${describeScore(sb)}`,
     sb.account?.signalSummary ? `:fire: Signals: ${sb.account.signalSummary}` : undefined,
   ].filter((l): l is string => Boolean(l)).join("\n");
 }
 
 /** The whole post, in the layout of the team's existing sample-request posts. Used when the app posts itself. */
-export function buildSlackMessage(sub: Submission, sf: SfContext, sb: StarbridgeResult, decision: Decision, next: NextStep, { host, state, write, draft }: SlackExtras = {}): string {
+export function buildSlackMessage(sub: Submission, sf: SfContext, sb: StarbridgeResult, decision: Decision, next: NextStep, { host, team, state, write, draft }: SlackExtras = {}): string {
   const salesforce = write
     ? `:salesforce: Salesforce: ${write.action}${write.note ? ` · ${write.note}` : ""}${sf.recordUrl ? ` · <${sf.recordUrl}|open record>` : ""}`
     : sf.recordUrl ? `:salesforce: Salesforce link: ${sf.recordUrl}` : undefined;
@@ -59,7 +64,7 @@ export function buildSlackMessage(sub: Submission, sf: SfContext, sb: Starbridge
     "",
     `:speaking_head_in_silhouette: Message: ${sub.needs || "(none)"}`,
   ].filter((l): l is string => l !== undefined);
-  const lines = [buildSlackHeader(sub, sb, decision, next, host), "", ...body];
+  const lines = [buildSlackHeader(sub, sb, decision, next, host, team), "", ...body];
   if (draft) {
     lines.push(`AI SDR reply (${draft.source}): <${draft.gmailUrl}|open as Gmail draft>`);
     lines.push("```Subject: " + draft.subject + "\n\n" + draft.body + "```");

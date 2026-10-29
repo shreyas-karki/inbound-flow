@@ -1,7 +1,9 @@
 // Who follows up, and on which calendar. Reads the "US - Mapping Owners for Inbounds" sheet, published as CSV:
-// - Mapping:        US State | Owner | User Long ID | … | Account Team   → the state's BDR (Level 2 Discovery)
+// - ft_owners:      State | Owner | Owner ID | Also add | Discovery | Discovery ID
+//                   A live copy of State_GM_owner (the source of truth since Oct 28): the State GM owns Level 3
+//                   First Touches, the contributors are added to the call, and Discovery takes Level 2.
 // - calendar_links: SF Long ID | SF Name | Calendar Link                 → each person's Google appointment page
-// - ft_owners:      State | Owner | Owner ID | Also add                  → the state's First Touch owner (Level 3)
+// - Mapping:        US State | Owner | User Long ID | … | Account Team   → Level 2 only for states with no Discovery
 // Make scenario 172177 also reads Mapping (columns A and C), so only ever add columns or tabs there.
 import { config } from "./config";
 import { stateName } from "./states";
@@ -11,11 +13,15 @@ export interface PersonRow { name: string; userId?: string; bookingUrl?: string 
 export interface StateRow { state: string; owner: string; userId?: string; alsoAdd: string[] }
 export interface RoutingTables {
   bdrs: StateRow[]; // from Mapping
-  firstTouch: StateRow[]; // from ft_owners
+  firstTouch: StateRow[]; // from ft_owners: the State GM and contributors
+  discovery: StateRow[]; // from ft_owners: the Discovery column
   people: PersonRow[]; // from calendar_links
 }
 
-export const EMPTY_TABLES: RoutingTables = { bdrs: [], firstTouch: [], people: [] };
+/** Who covers a state, for the Slack post and Make: the GM, who else is on the account team, and the Discovery BDR. */
+export interface StateTeam { state: string; gm: string; contributors: string[]; discovery?: string }
+
+export const EMPTY_TABLES: RoutingTables = { bdrs: [], firstTouch: [], discovery: [], people: [] };
 const OTHER = "Other";
 
 // ---------------------------------------------------------------- routing
@@ -42,18 +48,32 @@ export function resolveHost(decision: Decision, state: string | undefined, sf: S
     };
   }
 
-  // Level 3: First Touch with the state's owner, who decides who runs it.
+  // Level 3: First Touch on the State GM's calendar. A GM with no calendar yet hands the booking to the first
+  // contributor who has one, so a hot lead never waits on a call back; the GM is then added to the call.
   if (decision.route === "gm") {
     const row = rowFor(tables.firstTouch, state);
-    if (row) return personHost(row, tables, "first_touch_sheet");
-    return { name: routing.gmName, bookingUrl: routing.gmBookingUrl || undefined, alsoAdd: [], source: "env" };
+    if (!row) return { name: routing.gmName, bookingUrl: routing.gmBookingUrl || undefined, alsoAdd: [], source: "env" };
+    const gm = personHost(row, tables, "first_touch_sheet");
+    if (gm.bookingUrl) return gm;
+    for (const name of row.alsoAdd) {
+      const standIn = personHost({ ...row, owner: name, userId: undefined }, tables, "first_touch_sheet");
+      if (standIn.bookingUrl) return { ...standIn, alsoAdd: [row.owner, ...row.alsoAdd.filter((n) => n !== name)], standInFor: row.owner };
+    }
+    return gm;
   }
 
-  // Levels 0-2: the state's BDR. Only Level 2 books a call; 0 and 1 just need an owner for the Contact.
-  const row = rowFor(tables.bdrs, state);
+  // Levels 0-2: the state's Discovery BDR, else the Mapping tab. Only Level 2 books a call; 0 and 1 just need
+  // an owner for the Contact.
+  const row = rowFor(tables.discovery, state) ?? rowFor(tables.bdrs, state);
   const host = row ? personHost(row, tables, "bdr_sheet") : { name: routing.bdrName, alsoAdd: [], source: "env" as const };
   if (decision.level < 2) return { ...host, bookingUrl: undefined };
   return { ...host, bookingUrl: host.bookingUrl ?? (routing.bdrBookingUrl || undefined) };
+}
+
+export function stateTeam(state: string | undefined, tables: RoutingTables): StateTeam | undefined {
+  const row = rowFor(tables.firstTouch, state);
+  if (!row) return undefined;
+  return { state: row.state, gm: row.owner, contributors: row.alsoAdd, discovery: rowFor(tables.discovery, state)?.owner };
 }
 
 function rowFor(rows: StateRow[], state?: string): StateRow | undefined {
@@ -146,6 +166,13 @@ export function parseFirstTouch(csv: string): StateRow[] {
   );
 }
 
+/** The Discovery columns of ft_owners. Absent or blank → that state's Level 2 falls back to Mapping. */
+export function parseDiscovery(csv: string): StateRow[] {
+  return records(csv, { state: /state/i, owner: /^discovery$/i, userId: /^discovery.*id$/i }).flatMap((r) =>
+    r.owner ? statesIn(r.state).map((state) => ({ state, owner: r.owner, userId: cleanId(r.userId), alsoAdd: [] })) : [],
+  );
+}
+
 export function parsePeople(csv: string): PersonRow[] {
   return records(csv, { userId: /id/i, name: /name/i, bookingUrl: /link|url/i }).map((r) => ({
     name: r.name,
@@ -182,7 +209,7 @@ export async function loadRoutingTables(): Promise<RoutingTables> {
   try {
     const [mapping, calendars, ftOwners] = await Promise.all([get(mappingCsvUrl), get(calendarsCsvUrl), get(ftOwnersCsvUrl)]);
     const people = await Promise.all(parsePeople(calendars).map(async (p) => ({ ...p, bookingUrl: p.bookingUrl && (await expandShortLink(p.bookingUrl)) })));
-    const tables = { bdrs: parseBdrs(mapping), firstTouch: parseFirstTouch(ftOwners), people };
+    const tables = { bdrs: parseBdrs(mapping), firstTouch: parseFirstTouch(ftOwners), discovery: parseDiscovery(ftOwners), people };
     cache = { at: Date.now(), tables };
     return tables;
   } catch (err) {

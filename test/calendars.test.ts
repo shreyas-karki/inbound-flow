@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { EMPTY_TABLES, expandShortLink, parseCsv, resolveHost, resolveState } from "../lib/calendars";
+import { EMPTY_TABLES, expandShortLink, parseCsv, resolveHost, resolveState, stateTeam } from "../lib/calendars";
 import { nextStep } from "../lib/router";
 import { SubmissionSchema, type Decision, type SfContext } from "../lib/types";
-import { IDS, TABLES } from "./fixtures/routing";
+import { GM_TABLES, IDS, TABLES } from "./fixtures/routing";
 
 const decision = (level: Decision["level"], route: Decision["route"]): Decision => ({ level, route, reason: "test", source: "rules" });
 const L1 = decision(1, "email");
@@ -82,6 +82,41 @@ describe("resolveHost", () => {
     expect(resolveHost(owner, "New York", sf, TABLES)).toMatchObject({ name: "Deal Owner", userId: "005000000000008AAA", source: "salesforce" });
     expect(resolveHost(owner, "New York", { ...sf, openOpportunity: undefined }, EMPTY_TABLES).name).toBe("Account Owner");
     expect(nextStep(owner, resolveHost(owner, "New York", sf, TABLES))).toMatchObject({ type: "thanks", message: expect.stringContaining("Deal Owner") });
+  });
+});
+
+describe("State_GM_owner routing (ft_owners as a live copy)", () => {
+  it("Level 2 books with the state's Discovery BDR, not the Mapping tab", () => {
+    // Mapping has no Connecticut row, so it would fall to Other; the Discovery column says Luis.
+    expect(resolveHost(L2, "Connecticut", none, GM_TABLES)).toMatchObject({ name: "Luis Acevedo", userId: IDS.luis, source: "bdr_sheet" });
+    expect(resolveHost(L2, "Texas", none, GM_TABLES)).toMatchObject({ name: "Neftali Cuevas", userId: IDS.neftali });
+  });
+
+  it("a state with no Discovery name falls back to Mapping", () => {
+    expect(resolveHost(L2, "New York", none, GM_TABLES)).toMatchObject({ name: "Luis Acevedo", userId: IDS.luis });
+  });
+
+  it("Level 3 books on the State GM's calendar, contributors added", () => {
+    const host = resolveHost(L3, "Connecticut", none, GM_TABLES);
+    expect(host).toMatchObject({ name: "Eric Fontana", userId: IDS.eric, alsoAdd: ["Melina Gruber"] });
+    expect(host.standInFor).toBeUndefined();
+  });
+
+  it("a GM with no calendar yet hands the booking to the first contributor who has one, and joins the call", () => {
+    const host = resolveHost(L3, "Colorado", none, GM_TABLES);
+    expect(host).toMatchObject({ name: "Mariana Saravia", userId: IDS.mariana, alsoAdd: ["Jason Potell"], standInFor: "Jason Potell" });
+    expect(nextStep(L3, host)).toMatchObject({ type: "calendar", host: "Mariana Saravia" });
+  });
+
+  it("no one on the team has a calendar → the GM keeps the lead and calls back", () => {
+    const tables = { ...GM_TABLES, people: GM_TABLES.people.filter((p) => p.name !== "Mariana Saravia") };
+    expect(nextStep(L3, resolveHost(L3, "Colorado", none, tables))).toMatchObject({ type: "thanks", host: "Jason Potell" });
+  });
+
+  it("stateTeam names the GM, contributors and Discovery BDR; unlisted states get Other", () => {
+    expect(stateTeam("Colorado", GM_TABLES)).toEqual({ state: "Colorado", gm: "Jason Potell", contributors: ["Mariana Saravia"], discovery: "Neftali Cuevas" });
+    expect(stateTeam("Alaska", GM_TABLES)).toMatchObject({ state: "Other", gm: "Luis Acevedo", contributors: [] });
+    expect(stateTeam("Ohio", EMPTY_TABLES)).toBeUndefined();
   });
 });
 

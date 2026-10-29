@@ -101,6 +101,7 @@ export interface Host {
   userId?: string;
   bookingUrl?: string; // raw sheet link; nextStep() makes it embeddable
   alsoAdd: string[]; // First Touch: people to add to the call
+  standInFor?: string; // First Touch: the State GM this host books for while the GM has no calendar
   source: "first_touch_sheet" | "bdr_sheet" | "salesforce" | "env";
 }
 
