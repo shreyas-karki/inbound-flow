@@ -8,12 +8,14 @@ try { process.loadEnvFile(".env"); } catch { /* no .env: MOCK_MODE defaults to t
 process.env.TIER_SECRET ||= "local-dev-secret";
 
 const PORT = Number(process.env.PORT ?? 3000);
+const TYPES: Record<string, string> = { ".html": "text/html", ".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml", ".js": "text/javascript", ".css": "text/css" };
 
 async function main() {
   const { handleSubmission } = await import("./lib/router.js"); // after env is loaded
   const { config } = await import("./lib/config.js");
   const { listOutbox } = await import("./lib/outbox.js");
   const { handleTier } = await import("./lib/tier.js");
+  const { handlePhone } = await import("./lib/phone.js");
   const { warmStarbridge } = await import("./lib/warm.js");
 
   http.createServer(async (req, res) => {
@@ -36,6 +38,15 @@ async function main() {
       res.writeHead(out.status, { "Content-Type": "application/json" });
       return res.end(JSON.stringify(out.body));
     }
+    if (req.method === "POST" && req.url?.split("?")[0] === "/api/phone") {
+      let raw = "";
+      for await (const chunk of req) raw += chunk;
+      let body: unknown = {};
+      try { body = JSON.parse(raw); } catch { /* handled as validation error */ }
+      const out = await handlePhone(body);
+      res.writeHead(out.status, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify(out.body));
+    }
     if (req.method === "GET" && req.url?.split("?")[0] === "/api/warm") {
       const q = new URL(req.url, "http://localhost").searchParams;
       const work = warmStarbridge({ school: q.get("school") ?? undefined, email: q.get("email") ?? undefined, state: q.get("state") ?? undefined });
@@ -50,7 +61,7 @@ async function main() {
     const pathname = new URL(req.url ?? "/", "http://localhost").pathname; // ignore ?utm_… query strings
     const file = path.join(process.cwd(), "public", pathname === "/" ? "index.html" : path.normalize(pathname).replace(/^(\.\.[/\\])+/, ""));
     if (file.startsWith(path.join(process.cwd(), "public")) && fs.existsSync(file) && fs.statSync(file).isFile()) {
-      res.writeHead(200, { "Content-Type": file.endsWith(".html") ? "text/html" : "application/octet-stream" });
+      res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] ?? "application/octet-stream" });
       return fs.createReadStream(file).pipe(res);
     }
     res.writeHead(404).end("Not found");

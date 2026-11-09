@@ -75,12 +75,54 @@ input:focus,select:focus,button:focus-visible,a:focus-visible{outline:2px solid 
 body[data-done] .hero{display:none}
 body[data-done] main .wrap{grid-template-columns:1fr}
 body[data-done] .card{width:min(100%,760px);margin-inline:auto}
-/* booking: just the calendar, no card around it */
-body[data-booking] .card{width:min(100%,1000px);padding:0;border:0;background:none}
-body[data-booking] .cal{height:max(700px,calc(100vh - 140px));background:var(--surface)}
-@media (max-width:560px){
-  body[data-booking] .cal{height:820px;border-radius:0;border-inline:0}
+/* booking (Levels 2 and 3): what they qualified for and a phone number on the left, the calendar on the right.
+   The calendar stays grayed out until there's a phone number. On a phone it's two steps: number first, then the calendar. */
+body[data-booking] .card{width:min(100%,1200px);padding:0;overflow:hidden}
+.book{display:grid;grid-template-columns:minmax(320px,430px) minmax(0,1fr)}
+.intro{background:var(--soft);padding:clamp(24px,3vw,40px);display:flex;flex-direction:column;gap:18px}
+.steps{display:flex;gap:8px;list-style:none;margin:0;padding:0;font-size:14px;font-weight:600;color:var(--faint);counter-reset:s}
+.steps li{display:flex;align-items:center;gap:8px;counter-increment:s}
+.steps li::before{content:counter(s);display:grid;place-items:center;width:24px;height:24px;border-radius:50%;border:1.5px solid currentColor;font-size:13px}
+.steps li+li::after{content:none}
+.steps li+li{padding-left:12px;border-left:1px solid var(--line)}
+.steps li.on{color:var(--ink)}
+.steps li.on::before{background:var(--ink);border-color:var(--ink);color:#fff}
+.steps li.ok::before{content:"✓";background:var(--mint);border-color:var(--mint);color:var(--ink)}
+.eyebrow{align-self:flex-start;margin:0;padding:6px 12px;border-radius:999px;background:var(--mint);font-size:14px;font-weight:600}
+.intro h2{font-size:clamp(26px,2.6vw,34px);line-height:1.15;margin:0;letter-spacing:-.015em}
+.intro .sub{margin:0;color:var(--muted);font-size:17px}
+.art{width:100%;height:auto;display:block;border-radius:12px;background:var(--surface);padding:12px}
+.gate{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.gate .hint{margin:0;color:var(--muted);font-size:14px}
+.gate .btn{justify-content:center;margin-top:8px;transition:background .2s}
+.gate .btn:disabled{background:#C5CFCD;opacity:1;cursor:not-allowed}
+.gate .btn svg{width:18px;height:18px}
+.done-phone{margin:0;padding:14px 16px;border-radius:12px;background:var(--surface);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.done-phone::before{content:"✓";display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--mint);font-weight:700;font-size:13px}
+.link{font:inherit;font-size:14px;background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer;margin-left:auto}
+.calwrap{position:relative;min-width:0;background:var(--surface)}
+body[data-booking] .cal{height:max(720px,calc(100vh - 140px));border:0;border-radius:0;background:var(--surface);transition:filter .3s,opacity .3s}
+.calwrap[data-locked] .cal{filter:grayscale(1) blur(2px);opacity:.35;pointer-events:none}
+.lock{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;text-align:center;gap:6px;padding:24px}
+.calwrap:not([data-locked]) .lock{display:none}
+.lock img{width:180px;height:auto}
+.lock p{margin:0;font-size:18px;max-width:24ch}
+.calwrap h3{display:none}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.book .intro>*,.calwrap{animation:rise .35s ease-out both}
+@media (prefers-reduced-motion:reduce){.book .intro>*,.calwrap{animation:none}}
+@media (max-width:900px){
   body[data-booking] main .wrap{padding-inline:0}
+  body[data-booking] .card{border-radius:0;border-inline:0}
+  .book{grid-template-columns:1fr}
+  .intro{padding:24px 20px 28px}
+  /* step 1: just the offer and the number */
+  .calwrap[data-locked]{display:none}
+  /* step 2: the calendar takes the screen; the offer folds away */
+  .book[data-step="2"] .intro{padding-bottom:16px}
+  .book[data-step="2"] .intro>:not(.steps,.done-phone){display:none}
+  .calwrap h3{display:block;margin:0;padding:20px 20px 4px;font-size:22px}
+  body[data-booking] .cal{height:820px}
 }
 </style>
 </head>
@@ -166,6 +208,30 @@ body[data-booking] .cal{height:max(700px,calc(100vh - 140px));background:var(--s
 <template id="tBook">
   <h2 data-title></h2>
   <p class="sub" data-sub></p>
+</template>
+
+<template id="tQualified">
+  <div class="book">
+    <div class="intro">
+      <ol class="steps" aria-label="Progress"><li class="on">Your number</li><li>Pick a time</li></ol>
+      <p class="eyebrow" data-eyebrow></p>
+      <h2 data-title></h2>
+      <p class="sub" data-sub></p>
+      <img class="art" data-art alt="">
+      <form class="gate" novalidate>
+        <label for="confirm_phone">Best phone number to reach you</label>
+        <div class="phone"><span aria-hidden="true">🇺🇸 +1</span><input id="confirm_phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(555) 555-0123" required></div>
+        <p class="hint">For confirmation calls and coordinating deliveries.</p>
+        <button class="btn" disabled>Pick a time <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </form>
+      <p class="done-phone" hidden><span>We'll call <b data-phone></b></span><button class="link" type="button" data-edit>Change</button></p>
+    </div>
+    <div class="calwrap" data-locked>
+      <h3 data-cal-title></h3>
+      <iframe class="cal" tabindex="-1"></iframe>
+      <div class="lock"><img src="/img/math-expert.webp" alt="" width="180" height="138"><p><b>Enter your phone number</b> to see available times.</p></div>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -259,11 +325,7 @@ function render(out, data) {
     // description explains the meeting, so the calendar stands alone; text only shows when no calendar is configured.
     if (next.type === "calendar" && next.url) {
       document.body.dataset.booking = "";
-      const frame = document.createElement("iframe");
-      frame.className = "cal";
-      frame.src = next.url;
-      frame.title = `Booking calendar for ${next.host}`;
-      done.append(frame);
+      done.append(qualified(out, data));
     } else {
       done.append($("#tBook").content.cloneNode(true));
       $("[data-title]", done).textContent = out.level === 3 ? "Thanks, our growth team will be in touch" : "Thanks, our math team will be in touch";
@@ -274,6 +336,96 @@ function render(out, data) {
   $("#vWait").hidden = true;
   done.hidden = false;
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// What each level qualified for. Level 3 is the growth manager's First Touch, Level 2 the BDR's Discovery.
+const OFFER = {
+  3: {
+    eyebrow: "Physical samples · 30-minute call",
+    title: "You've qualified for full access physical samples!",
+    sub: "With a 30 minute call with a math expert, we'll walk you through the materials and our coaching to get them to your school.",
+    art: "/img/physical-samples.webp", alt: "Thinking Math! physical samples: manipulatives, student logbook, calendar and digital practice",
+    cal: "Pick a time for your 30-minute call",
+  },
+  2: {
+    eyebrow: "Digital samples · 15-minute call",
+    title: "You've qualified for full access digital samples!",
+    sub: "With a 15 minute call with a math expert, we'll walk you through the materials and even get some to your school.",
+    art: "/img/digital-samples.png", alt: "Two whiteboards showing students' strategies for 35 + 42",
+    cal: "Pick a time for your 15-minute call",
+  },
+};
+
+/** 10 US digits as (555) 555-0123, or null. A leading 1 is dropped. */
+function usPhone(raw) {
+  let d = String(raw || "").replace(/\D/g, "");
+  if (d.length === 11 && d[0] === "1") d = d.slice(1);
+  return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : null;
+}
+
+function qualified(out, data) {
+  const offer = OFFER[out.level === 3 ? 3 : 2];
+  const view = $("#tQualified").content.cloneNode(true);
+  const book = $(".book", view), wrap = $(".calwrap", view), frame = $(".cal", view);
+  const gate = $(".gate", view), input = $("#confirm_phone", view), go = $("button", gate), confirmed = $(".done-phone", view);
+  const [step1, step2] = view.querySelectorAll(".steps li");
+
+  $("[data-eyebrow]", view).textContent = offer.eyebrow;
+  $("[data-title]", view).textContent = offer.title;
+  $("[data-sub]", view).textContent = offer.sub;
+  $("[data-cal-title]", view).textContent = offer.cal;
+  Object.assign($("[data-art]", view), { src: offer.art, alt: offer.alt });
+  // Loads behind the gray, so it's ready the moment they unlock it.
+  frame.src = out.next.url;
+  frame.title = `Booking calendar for ${out.next.host}`;
+
+  // Pre-filled when they typed one on our form; the Unbounce handoff leaves it out of the URL.
+  input.value = usPhone(data.phone_number) || "";
+  const check = () => (go.disabled = !usPhone(input.value));
+  input.addEventListener("input", () => {
+    const formatted = usPhone(input.value);
+    if (formatted) input.value = formatted;
+    check();
+  });
+  check();
+
+  gate.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const phone = usPhone(input.value);
+    if (!phone) return;
+    savePhone(phone, out, data);
+    $("[data-phone]", confirmed).textContent = phone;
+    gate.hidden = true;
+    confirmed.hidden = false;
+    delete wrap.dataset.locked;
+    frame.removeAttribute("tabindex");
+    book.dataset.step = "2";
+    step1.className = "ok";
+    step2.className = "on";
+    // On a phone the calendar is now below a short header: bring it into view.
+    if (matchMedia("(max-width: 900px)").matches) window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  $("[data-edit]", confirmed).addEventListener("click", () => {
+    gate.hidden = false;
+    confirmed.hidden = true;
+    wrap.dataset.locked = "";
+    frame.tabIndex = -1;
+    delete book.dataset.step;
+    step1.className = "on";
+    step2.className = "";
+    input.focus();
+  });
+  return view;
+}
+
+/**
+ * Fire and forget: the calendar never waits on it. The server checks it against the district's main line and
+ * sends it to Slack (and Salesforce through Make) when it's the lead's own number.
+ */
+function savePhone(phone, out, data) {
+  const body = { phone_number: phone, level: out.level, lead: data };
+  fetch("/api/phone", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), keepalive: true }).catch(() => {});
 }
 
 function bad(name, text) {

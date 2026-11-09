@@ -85,6 +85,25 @@ describe("Curriculum director at a $30k+ district", () => {
     expect(capFirstTouch(decision, director(), sf(209720), sb({ score: 42 }))).toBe(decision);
   });
 
+  it("goes straight to the GM at any district size when adopting SY26-27 or SY27-28", () => {
+    const soon = director({ adoption_timeline: "SY26-27" });
+    // $8,050 PARR and a score of 42: under the floor on both counts, but adopting soon.
+    const decision = applyRules(soon, sf(8050), sb({ score: 42 }))!;
+    expect(decision).toMatchObject({ level: 3, route: "gm", source: "rules", reason: expect.stringContaining("adopting SY26-27 at a district with $8,050 PARR") });
+    expect(capFirstTouch(decision, soon, sf(8050), sb({ score: 42 }))).toBe(decision);
+    expect(applyRules(director({ adoption_timeline: "SY27-28" }), sf(), sb({ enrollment: 300 }))).toMatchObject({ level: 3, route: "gm" });
+    expect(applyRules(director({ adoption_timeline: "SY27-28" }), { matchedBy: "none" }, { source: "timeout" })).toMatchObject({
+      level: 3, route: "gm", reason: "Curriculum Director adopting SY27-28: always a First Touch with the growth manager.",
+    });
+  });
+
+  it("leaves a small district to Claude and the floor when the director isn't adopting soon, or isn't a director", () => {
+    for (const adoption_timeline of ["Already adopted", "SY28-29 or later", "No plans yet", "I'm not sure", ""]) {
+      expect(applyRules(director({ adoption_timeline }), sf(8050), sb()), adoption_timeline).toBeNull();
+    }
+    expect(applyRules(director({ job_title: "Superintendent", adoption_timeline: "SY26-27" }), sf(8050), sb())).toBeNull();
+  });
+
   it("leaves other decision makers to Claude, and existing owners and non-served countries win", () => {
     for (const job_title of ["Superintendent", "Chief Academic Officer", "Principal", "Math / STEM Director"]) {
       expect(applyRules(director({ job_title }), sf(209720), sb()), job_title).toBeNull();

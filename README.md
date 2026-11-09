@@ -87,6 +87,7 @@ Follows Innovamat's US inbound model (from the innovamat-salesforce knowledge ba
 ```
 api/submit.ts        Vercel function (POST /api/submit): the page and the Unbounce handoff
 api/tier.ts          Vercel function (POST /api/tier): Make asks for the decision
+api/phone.ts         Vercel function (POST /api/phone): the number a Level 2/3 lead enters before the calendar unlocks
 lib/router.ts        The pipeline (decide, then act), timings and logging
 lib/tier.ts          /api/tier: secret check, Make's response shape, fallback
 lib/decisions.ts     Decide once per lead (Upstash Redis or in memory)
@@ -116,7 +117,7 @@ Levels follow the US deal-stage framework (Discovery vs First Touch is defined b
 
 | Level | Who | Meeting | Reply |
 |---|---|---|---|
-| 3 | Every curriculum director at a $30k+ PARR district, WHY NOW or not; other decision makers (CAO, asst. superintendent, superintendent; principal for one building / NYC) with a WHY NOW (adopting SY26-27/27-28 or a Hot/Warm district); coaches and TOSAs at a Hot/Warm district | First Touch with a growth manager | Direct walkthrough + sample drop-off |
+| 3 | Every curriculum director at a $30k+ PARR district (WHY NOW or not) or adopting SY26-27/27-28 (any size); other decision makers (CAO, asst. superintendent, superintendent; principal for one building / NYC) with a WHY NOW (adopting SY26-27/27-28 or a Hot/Warm district); coaches and TOSAs at a Hot/Warm district | First Touch with a growth manager | Direct walkthrough + sample drop-off |
 | 2 | Champions (math director, coordinators, MTSS, Title I), decision makers without a WHY NOW yet, all other coaches and TOSAs, and teachers only at a hot district or with an evaluation signal | Discovery with a BDR | Short call, who else is involved |
 | 1 | Teachers and interventionists with no WHY NOW | None | "We'll be in touch; loop in your principal/AP (NYC) or district curriculum lead" |
 

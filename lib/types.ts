@@ -47,6 +47,7 @@ export interface SfContext {
     parentId?: string | null;
     parentName?: string | null;
     parr?: number; // Total PARR (USD) of the lead's district: Total_PARR__c, the "Total Account PARR" in Slack
+    phones?: string[]; // the school's and district's main lines (Account.Phone): a number a lead gives us that matches one isn't theirs
   };
   openOpportunity?: { id: string; stage: string; ownerId?: string; ownerName?: string; typeOfSale?: string };
   // From Make's check (lib/handoff.ts): an active deal, open renewal or recent Closed Won on the school, district or contact's account.

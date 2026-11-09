@@ -1,6 +1,32 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "inbound-flow", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 3000, "autoPort": true }
+    {
+      "name": "inbound-flow",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
+      "name": "inbound-flow-mock",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "MOCK_MODE=true",
+        "MOCK_SALESFORCE=true",
+        "MOCK_STARBRIDGE=true",
+        "MOCK_CLAUDE=true",
+        "SLACK_WEBHOOK_URL=",
+        "ACTIONS_OWNER=app",
+        "PORT=3100",
+        "npm",
+        "run",
+        "dev"
+      ],
+      "port": 3100
+    }
   ]
 }

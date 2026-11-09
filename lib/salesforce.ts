@@ -92,7 +92,7 @@ export function schoolName(school: string): string {
 }
 
 const DISTRICT_PREFIX = "[School District]";
-const ACCOUNT_FIELDS = "Id, Name, Label__c, OwnerId, Owner.Name, ParentId, Parent.Name, Total_PARR__c, Parent.Total_PARR__c";
+const ACCOUNT_FIELDS = "Id, Name, Label__c, OwnerId, Owner.Name, ParentId, Parent.Name, Total_PARR__c, Parent.Total_PARR__c, Phone, Parent.Phone";
 
 /** Pick one account only when the match is unambiguous. Districts (no parent) win over schools. */
 export function pickAccount<T extends { Name: string; ParentId?: string | null }>(typed: string, accounts: T[]): T | undefined {
@@ -146,6 +146,12 @@ export function districtParr(a: { Name?: string; Total_PARR__c?: number | null; 
   const isDistrict = (name?: string) => Boolean(name?.startsWith(DISTRICT_PREFIX));
   const parr = !isDistrict(a.Name) && isDistrict(a.Parent?.Name) ? a.Parent?.Total_PARR__c : a.Total_PARR__c;
   return typeof parr === "number" ? parr : undefined;
+}
+
+/** The school's and its district's main lines, as Salesforce has them. Undefined when neither has one. */
+export function accountPhones(a: { Phone?: string | null; Parent?: { Phone?: string | null } | null }): string[] | undefined {
+  const phones = [a.Phone, a.Parent?.Phone].filter((p): p is string => Boolean(p?.trim()));
+  return phones.length ? phones : undefined;
 }
 
 /** The district most colleagues on the same email domain belong to, when they mostly agree. */
@@ -269,7 +275,7 @@ class LiveSalesforce implements SalesforceClient {
         if (ctx.matchedBy === "none") ctx.matchedBy = "email-domain";
         ctx.account = {
           id: acct.Id, name: acct.Name, label: acct.Label__c, ownerId: acct.OwnerId,
-          ownerName: acct.Owner?.Name, parentId: acct.ParentId, parentName: acct.Parent?.Name, parr: districtParr(acct),
+          ownerName: acct.Owner?.Name, parentId: acct.ParentId, parentName: acct.Parent?.Name, parr: districtParr(acct), phones: accountPhones(acct),
         };
       }
     }
@@ -296,7 +302,7 @@ class LiveSalesforce implements SalesforceClient {
         if (ctx.matchedBy === "none") ctx.matchedBy = "account-name";
         ctx.account = {
           id: pick.Id, name: pick.Name, label: pick.Label__c, ownerId: pick.OwnerId,
-          ownerName: pick.Owner?.Name, parentId: pick.ParentId, parentName: pick.Parent?.Name, parr: districtParr(pick),
+          ownerName: pick.Owner?.Name, parentId: pick.ParentId, parentName: pick.Parent?.Name, parr: districtParr(pick), phones: accountPhones(pick),
         };
       } else if (accounts.length) {
         ctx.accountCandidates = accounts.map((a) => a.Name);

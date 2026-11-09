@@ -43,6 +43,8 @@ export const config = {
     timeoutMs: Number(env("STARBRIDGE_TIMEOUT_MS", "6000")),
   },
 
+  // Optional: a Make webhook that writes the number a lead confirms before booking onto their Salesforce Contact.
+  phoneWebhookUrl: env("MAKE_PHONE_WEBHOOK_URL"),
   slack: {
     webhookUrl: env("SLACK_WEBHOOK_URL"),
   },
@@ -132,8 +134,9 @@ export const rulesConfig = {
     minEnrollment: 650, // ~$30k PARR at ~$46 per student; used only without PARR
     minScore: 50, // Starbridge account score, 0-100
   },
-  // These roles always get the growth manager's calendar at a district that clears the size floor above
-  // ($30k+ PARR, or 650+ students without PARR), with or without a WHY NOW, and whatever the Starbridge score.
+  // These roles always get the growth manager's calendar, whatever the Starbridge score, when either:
+  // - the district clears the size floor above ($30k+ PARR, or 650+ students without PARR), WHY NOW or not, or
+  // - they're adopting SY26-27 or SY27-28, at any district size (this overrides the floor).
   // Kearny, NJ (Nov 2): a Curriculum Director at $209,720 PARR adopting SY28-29 got a BDR Discovery instead.
   directorFirstTouch: {
     roles: ["Curriculum Director"],

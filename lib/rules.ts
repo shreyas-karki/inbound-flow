@@ -73,17 +73,23 @@ function districtSize(sf: SfContext, sb?: StarbridgeResult): { label: string; sm
   return undefined;
 }
 
-/** A curriculum director at a district that clears the size floor goes to the GM, WHY NOW or not. */
+/**
+ * A curriculum director goes to the GM when the district clears the size floor (WHY NOW or not), or when they're
+ * adopting SY26-27 / SY27-28 (at any size, or with no size data at all).
+ */
 function directorFirstTouch(sub: Submission, sf: SfContext, sb?: StarbridgeResult): Decision | null {
   if (!rulesConfig.directorFirstTouch.roles.includes(sub.job_title)) return null;
   const size = districtSize(sf, sb);
-  if (!size || size.small) return null;
-  return { level: 3, route: "gm", reason: `${sub.job_title} at a district with ${size.label}: always a First Touch with the growth manager.`, source: "rules" };
+  const soon = adoptingSoon(sub);
+  if (!soon && (!size || size.small)) return null;
+  const why = [soon && `adopting ${sub.adoption_timeline}`, size && `at a district with ${size.label}`].filter(Boolean).join(" ");
+  return { level: 3, route: "gm", reason: `${sub.job_title} ${why}: always a First Touch with the growth manager.`, source: "rules" };
 }
 
 /**
  * Runs after rules and Claude: a First Touch at a small or low-scoring district becomes a BDR Discovery.
- * A curriculum director at a district that clears the size floor keeps it, whatever the Starbridge score.
+ * A curriculum director keeps it, whatever the Starbridge score, at a district that clears the size floor or
+ * when adopting soon.
  */
 export function capFirstTouch(decision: Decision, sub: Submission, sf: SfContext, sb: StarbridgeResult): Decision {
   if (decision.route !== "gm" || directorFirstTouch(sub, sf, sb)) return decision;
