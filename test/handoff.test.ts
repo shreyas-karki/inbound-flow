@@ -62,6 +62,20 @@ describe("Make's Salesforce handoff", () => {
     expect(calls.lookup).toBe(0); // the app's own (SSO-blocked) lookup never runs
   });
 
+  it("a Curriculum Director at a $30k+ district from Make's handoff gets the GM's calendar, WHY NOW or not", async () => {
+    // Kearny, NJ (Nov 2): adopting SY28-29, no message, $209,720 PARR. Was shown Luis's Discovery calendar.
+    const lead = fixture("level2");
+    Object.assign(lead.data, {
+      user_profile: ["Curriculum Director"], school: ["Kearny"], message: [""],
+      when_is_your_district_planning_to_adopt_a_new_math_curriculum: ["SY28-29 or later"],
+    });
+    const kearny = { matched_by: "email", contact_id: "003QD000015LGoEYAW", account_id: "001KEARNY", account_name: "[School District] Kearny (Kearny, NJ)", account_parr: "209720", parent_parr: "", owner_id: "", owner_name: "" };
+    const out = await handleTier(SECRET, { ...lead, salesforce: kearny }, deps().d, SECRET);
+    expect(out.body).toMatchObject({ level: 3, route: "gm", meeting: "first_touch", source: "rules", host_name: "Eric Fontana" });
+    expect(out.body.booking_url).toContain("AcZEric");
+    expect(out.body.reason).toContain("$209,720 PARR");
+  });
+
   it("accepts the handoff as a JSON string too, the way Make's CreateJSON output can arrive", async () => {
     const out = await handleTier(SECRET, { ...fixture("level2"), salesforce: JSON.stringify(AKRON) }, deps().d, SECRET);
     expect(out.body).toMatchObject({ route: "owner", host_name: "Eric Fontana" });

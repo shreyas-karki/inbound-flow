@@ -132,6 +132,12 @@ export const rulesConfig = {
     minEnrollment: 650, // ~$30k PARR at ~$46 per student; used only without PARR
     minScore: 50, // Starbridge account score, 0-100
   },
+  // These roles always get the growth manager's calendar at a district that clears the size floor above
+  // ($30k+ PARR, or 650+ students without PARR), with or without a WHY NOW, and whatever the Starbridge score.
+  // Kearny, NJ (Nov 2): a Curriculum Director at $209,720 PARR adopting SY28-29 got a BDR Discovery instead.
+  directorFirstTouch: {
+    roles: ["Curriculum Director"],
+  },
   // A very large district always enters the funnel: anyone there who would only get the Level 1 email
   // (a teacher with no signal, say) gets a BDR Discovery instead. Level 0 non-buyers stay Level 0.
   largeDistrict: {

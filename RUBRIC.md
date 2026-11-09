@@ -48,7 +48,8 @@ The call has two goals: the decision maker's name and the WHY NOW. With both, th
 
 ## Level 3: First Touch
 The person who signs, or the person running the review, with a reason to change now.
-- Decision makers (superintendent, assistant superintendent, CAO, curriculum director, director of teaching & learning, district administrator) AND any of:
+- Every curriculum director at a district of $30k+ Total PARR (650+ students in Starbridge when Salesforce has no PARR), with or without a WHY NOW. They skip Claude, and a low Starbridge score doesn't cap them
+- Other decision makers (superintendent, assistant superintendent, CAO, curriculum director, director of teaching & learning, district administrator) AND any of:
   - adopting in SY26-27 or SY27-28
   - a Hot or Warm Starbridge district, or an account score of 70+
   - "I'm not sure" on adoption at a district with Strong or Ideal fit
@@ -59,7 +60,9 @@ The person who signs, or the person running the review, with a reason to change 
 - Anyone, including a teacher, whose message says they sit on the curriculum, adoption or pilot committee, or lead the review
 - Principals who decide for their whole school: NYC principals, and principals of a single-school district, charter or private school
 
-**Floor:** a district under $30k Total PARR in Salesforce, or with a Starbridge score under 50, never gets a First Touch, however senior the person or strong the signal. Those leads become a Level 2 Discovery with the BDR. Size is measured by PARR; when Salesforce has no PARR, under 650 students in Starbridge (about $30k) counts instead. With no data at all the floor doesn't apply.
+**Floor:** a district under $30k Total PARR in Salesforce, or with a Starbridge score under 50, never gets a First Touch, however senior the person or strong the signal. Those leads become a Level 2 Discovery with the BDR. Size is measured by PARR; when Salesforce has no PARR, under 650 students in Starbridge (about $30k) counts instead. With no data at all the floor doesn't apply. The one exception: a curriculum director at a $30k+ district keeps the First Touch whatever the Starbridge score.
+
+**Why curriculum directors:** Kearny, NJ (Nov 2): a curriculum director at $209,720 PARR adopting SY28-29 got a BDR Discovery for lack of a WHY NOW. The team wants every curriculum director at a $30k+ district on a growth manager's calendar.
 
 **Why $30k:** of 763 US First Touches since Aug 2025, districts at $20–30k PARR won 2 of 34; districts at $30–40k won 7 of 42, as well as any larger band.
 

@@ -105,7 +105,7 @@ export async function decide(sub: Submission, deps: Deps): Promise<Decided> {
 
   const ruled = applyRules(sub, sf, sb);
   const scored: Decision = ruled ? { ...ruled, meeting: ruled.route === "owner" ? undefined : meetingForLevel(ruled.level) } : await time("scoring", () => scoreWithFallback(deps.scorer, sub, sf, sb));
-  const decision = liftLargeDistrict(capFirstTouch(capTeacherWithoutSignal(scored, sub, sb), sf, sb), sf);
+  const decision = liftLargeDistrict(capFirstTouch(capTeacherWithoutSignal(scored, sub, sb), sub, sf, sb), sf);
 
   const state = resolveState(sub, sf, sb);
   const routing = await time("routing_sheet", () => tables);

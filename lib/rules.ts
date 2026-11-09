@@ -37,6 +37,9 @@ export function applyRules(sub: Submission, sf: SfContext, sb?: StarbridgeResult
     return { level: 0, route: "email", reason: `Role "${sub.job_title}" is not a buyer.`, source: "rules" };
   }
 
+  const director = directorFirstTouch(sub, sf, sb);
+  if (director) return director;
+
   // GM fast lane: a hot, sizable district adopting soon, and anyone there who isn't a teacher.
   const a = sb?.account;
   const { signalBands, minEnrollment, adoptionTimelines } = rulesConfig.firstTouch;
@@ -57,15 +60,37 @@ export function applyRules(sub: Submission, sf: SfContext, sb?: StarbridgeResult
   return null;
 }
 
-/** Runs after rules and Claude: a First Touch at a small or low-scoring district becomes a BDR Discovery. */
-export function capFirstTouch(decision: Decision, sf: SfContext, sb: StarbridgeResult): Decision {
-  if (decision.route !== "gm") return decision;
-  const { minParr, minEnrollment, minScore } = rulesConfig.firstTouchFloor;
+/**
+ * The district's size as the First Touch floor measures it: Salesforce Total PARR, or Starbridge students only when
+ * Salesforce has no PARR. Undefined with neither.
+ */
+function districtSize(sf: SfContext, sb?: StarbridgeResult): { label: string; small: boolean } | undefined {
+  const { minParr, minEnrollment } = rulesConfig.firstTouchFloor;
   const parr = sf.account?.parr;
-  const enrollment = sb.account?.enrollment;
+  if (parr !== undefined) return { label: `$${Math.round(parr).toLocaleString("en-US")} PARR`, small: parr < minParr };
+  const enrollment = sb?.account?.enrollment;
+  if (enrollment !== undefined) return { label: `${enrollment.toLocaleString("en-US")} students`, small: enrollment < minEnrollment };
+  return undefined;
+}
+
+/** A curriculum director at a district that clears the size floor goes to the GM, WHY NOW or not. */
+function directorFirstTouch(sub: Submission, sf: SfContext, sb?: StarbridgeResult): Decision | null {
+  if (!rulesConfig.directorFirstTouch.roles.includes(sub.job_title)) return null;
+  const size = districtSize(sf, sb);
+  if (!size || size.small) return null;
+  return { level: 3, route: "gm", reason: `${sub.job_title} at a district with ${size.label}: always a First Touch with the growth manager.`, source: "rules" };
+}
+
+/**
+ * Runs after rules and Claude: a First Touch at a small or low-scoring district becomes a BDR Discovery.
+ * A curriculum director at a district that clears the size floor keeps it, whatever the Starbridge score.
+ */
+export function capFirstTouch(decision: Decision, sub: Submission, sf: SfContext, sb: StarbridgeResult): Decision {
+  if (decision.route !== "gm" || directorFirstTouch(sub, sf, sb)) return decision;
+  const size = districtSize(sf, sb);
+  const { minScore } = rulesConfig.firstTouchFloor;
   const why = [
-    parr !== undefined && parr < minParr && `$${Math.round(parr).toLocaleString("en-US")} PARR`,
-    parr === undefined && enrollment !== undefined && enrollment < minEnrollment && `${enrollment.toLocaleString("en-US")} students`,
+    size?.small && size.label,
     sb.account && sb.account.score < minScore && `Starbridge score ${sb.account.score}`,
   ].filter(Boolean).join(", ");
   if (!why) return decision;
