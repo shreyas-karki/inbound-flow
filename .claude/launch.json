@@ -22,6 +22,10 @@
         "SLACK_WEBHOOK_URL=",
         "ACTIONS_OWNER=app",
         "PORT=3100",
+        "GM_NAME=Eric Fontana",
+        "GM_BOOKING_URL=https://calendar.google.com/calendar/appointments/schedules/AcZssZ1HWtH0butl1iuvZeZV5Lw12qx4nwa0m7KfFY8WSuVkEWyrGWkdN56bNHKw6SxOBRfzovFF-89U",
+        "BDR_NAME=Luis Acevedo",
+        "BDR_BOOKING_URL=https://calendar.google.com/calendar/appointments/schedules/AcZssZ1vRzr-CVZ8DYqWMUmtTH3ZV4hh5rmIjvWBlb3AmUT36IGAybI1O-fHoeCoJ76nbBQCCUne9h-G",
         "npm",
         "run",
         "dev"
