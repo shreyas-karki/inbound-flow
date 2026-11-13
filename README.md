@@ -44,6 +44,7 @@ For the A/B test (steps in [LAUNCH.md](LAUNCH.md)), a new Make scenario receives
 - **`POST /api/tier`** takes `{ "data": <Unbounce data.json>, "page_url", "page_name" }` with the header `x-inbound-secret: $TIER_SECRET` (401 without it). It always answers 200 with a flat body: `level, route, meeting, reason, source, fallback, internal_test, decision_maker, state, host_name, host_user_id, also_add, booking_url, starbridge_*, sf_contact_id, sf_account_id, sf_match, open_opp_id, slack_text, cached`. On any failure it answers Level 2 with `fallback: true`.
 - **Decide once.** The lead's browser (`/api/submit`) and Make both ask about the same lead within seconds. The first one scores it, and the second gets the cached answer, so the calendar on the page always matches the level in Slack. The cache is keyed on email + role + adoption timeline and kept for 2 hours in Upstash Redis (`KV_REST_API_*` or `UPSTASH_REDIS_REST_*`), or in memory when Redis isn't set.
 - **`ACTIONS_OWNER=make`** stops this app from writing Salesforce, posting to Slack and drafting the AI reply. It still decides, shows the page and logs. The default `app` keeps today's behaviour.
+- **School email before the calendar.** A Level 2 or 3 lead gives a school or district email before the calendar unlocks. Personal addresses (Gmail, Yahoo, AOL, ISP mail; list in `lib/email.ts`) are refused on the page and again by `/api/verify`. No code is sent. When the lead switches to a different email from the form's, Slack gets a note. See `lib/verify.ts`.
 - **Salesforce comes from Make.** The app's own Salesforce login is blocked by SSO, so Make reads Salesforce first and adds what it found as `salesforce` on `/api/tier`: flat strings (`matched_by, contact_id, account_*, parent_*, account_parr, parent_parr, owner_id, owner_name, owner_why, opp_id, opp_stage`). An owner there (an active deal, open renewal or recent Closed Won) routes the lead to them: Level 3, no calendar, "*Owner* will reach out". The page waits up to `HANDOFF_WAIT_MS` (6 s) for Make's handoff, alongside Starbridge, before deciding without it. See `lib/handoff.ts`.
 - **Field names:** both endpoints accept Unbounce's field IDs (`first_name`, `user_profile`, `message`, …), array-wrapped or not. See `lib/unbounce.ts`.
 - **Try it:** `scripts/try-tier.sh` sends each `test/fixtures/unbounce-*.json` to a running server. Locally the dev server's secret is `local-dev-secret`.
@@ -87,7 +88,7 @@ Follows Innovamat's US inbound model (from the innovamat-salesforce knowledge ba
 ```
 api/submit.ts        Vercel function (POST /api/submit): the page and the Unbounce handoff
 api/tier.ts          Vercel function (POST /api/tier): Make asks for the decision
-api/phone.ts         Vercel function (POST /api/phone): the number a Level 2/3 lead enters before the calendar unlocks
+api/verify.ts        Vercel function (POST /api/verify): a Level 2/3 lead gives a school email before the calendar unlocks
 lib/router.ts        The pipeline (decide, then act), timings and logging
 lib/tier.ts          /api/tier: secret check, Make's response shape, fallback
 lib/decisions.ts     Decide once per lead (Upstash Redis or in memory)

@@ -15,7 +15,7 @@ async function main() {
   const { config } = await import("./lib/config.js");
   const { listOutbox } = await import("./lib/outbox.js");
   const { handleTier } = await import("./lib/tier.js");
-  const { handlePhone } = await import("./lib/phone.js");
+  const { handleVerify } = await import("./lib/verify.js");
   const { warmStarbridge } = await import("./lib/warm.js");
 
   http.createServer(async (req, res) => {
@@ -38,12 +38,12 @@ async function main() {
       res.writeHead(out.status, { "Content-Type": "application/json" });
       return res.end(JSON.stringify(out.body));
     }
-    if (req.method === "POST" && req.url?.split("?")[0] === "/api/phone") {
+    if (req.method === "POST" && req.url?.split("?")[0] === "/api/verify") {
       let raw = "";
       for await (const chunk of req) raw += chunk;
       let body: unknown = {};
       try { body = JSON.parse(raw); } catch { /* handled as validation error */ }
-      const out = await handlePhone(body);
+      const out = await handleVerify(body);
       res.writeHead(out.status, { "Content-Type": "application/json" });
       return res.end(JSON.stringify(out.body));
     }

@@ -7,6 +7,7 @@
 import { config } from "./config";
 import { isDecisionMaker, isInternalTest } from "./rules";
 import type { Decision, SfContext, Submission, WriteResult } from "./types";
+import { isPersonalEmail } from "./email";
 
 export interface SalesforceClient {
   lookup(sub: Submission): Promise<SfContext>;
@@ -92,7 +93,7 @@ export function schoolName(school: string): string {
 }
 
 const DISTRICT_PREFIX = "[School District]";
-const ACCOUNT_FIELDS = "Id, Name, Label__c, OwnerId, Owner.Name, ParentId, Parent.Name, Total_PARR__c, Parent.Total_PARR__c, Phone, Parent.Phone";
+const ACCOUNT_FIELDS = "Id, Name, Label__c, OwnerId, Owner.Name, ParentId, Parent.Name, Total_PARR__c, Parent.Total_PARR__c";
 
 /** Pick one account only when the match is unambiguous. Districts (no parent) win over schools. */
 export function pickAccount<T extends { Name: string; ParentId?: string | null }>(typed: string, accounts: T[]): T | undefined {
@@ -109,15 +110,12 @@ export function pickAccount<T extends { Name: string; ParentId?: string | null }
 }
 
 // Personal and internal domains say nothing about the district.
-const NON_DISTRICT_DOMAINS = new Set([
-  "gmail.com", "googlemail.com", "yahoo.com", "hotmail.com", "outlook.com", "live.com", "msn.com", "aol.com",
-  "icloud.com", "me.com", "mac.com", "comcast.net", "att.net", "verizon.net", "protonmail.com", "proton.me", "innovamat.com",
-]);
+const INTERNAL_DOMAINS = new Set(["innovamat.com"]);
 
 /** "jane@portchesterschools.org" → "portchesterschools.org"; undefined for gmail and the like. */
 export function emailDomain(email: string): string | undefined {
   const domain = email.split("@")[1]?.trim().toLowerCase();
-  return domain && !NON_DISTRICT_DOMAINS.has(domain) ? domain : undefined;
+  return domain && !INTERNAL_DOMAINS.has(domain) && !isPersonalEmail(email) ? domain : undefined;
 }
 
 interface ColleagueRow {
@@ -149,11 +147,6 @@ export function districtParr(a: { Name?: string; Total_PARR__c?: number | null; 
 }
 
 /** The school's and its district's main lines, as Salesforce has them. Undefined when neither has one. */
-export function accountPhones(a: { Phone?: string | null; Parent?: { Phone?: string | null } | null }): string[] | undefined {
-  const phones = [a.Phone, a.Parent?.Phone].filter((p): p is string => Boolean(p?.trim()));
-  return phones.length ? phones : undefined;
-}
-
 /** The district most colleagues on the same email domain belong to, when they mostly agree. */
 export function consensusDistrict(colleagues: ColleagueRow[]): string | undefined {
   const counts = new Map<string, number>();
@@ -275,7 +268,7 @@ class LiveSalesforce implements SalesforceClient {
         if (ctx.matchedBy === "none") ctx.matchedBy = "email-domain";
         ctx.account = {
           id: acct.Id, name: acct.Name, label: acct.Label__c, ownerId: acct.OwnerId,
-          ownerName: acct.Owner?.Name, parentId: acct.ParentId, parentName: acct.Parent?.Name, parr: districtParr(acct), phones: accountPhones(acct),
+          ownerName: acct.Owner?.Name, parentId: acct.ParentId, parentName: acct.Parent?.Name, parr: districtParr(acct),
         };
       }
     }
@@ -302,7 +295,7 @@ class LiveSalesforce implements SalesforceClient {
         if (ctx.matchedBy === "none") ctx.matchedBy = "account-name";
         ctx.account = {
           id: pick.Id, name: pick.Name, label: pick.Label__c, ownerId: pick.OwnerId,
-          ownerName: pick.Owner?.Name, parentId: pick.ParentId, parentName: pick.Parent?.Name, parr: districtParr(pick), phones: accountPhones(pick),
+          ownerName: pick.Owner?.Name, parentId: pick.ParentId, parentName: pick.Parent?.Name, parr: districtParr(pick),
         };
       } else if (accounts.length) {
         ctx.accountCandidates = accounts.map((a) => a.Name);

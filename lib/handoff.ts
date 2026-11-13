@@ -2,7 +2,7 @@
 // The lead's browser asks /api/submit at the same moment, so the handoff is parked in the shared store and
 // decide() waits a few seconds for it before scoring. That way the page and Slack agree on an existing owner.
 import type { Store } from "./decisions";
-import { accountPhones, districtParr } from "./salesforce";
+import { districtParr } from "./salesforce";
 import type { SfContext } from "./types";
 
 /** What Make sends as `salesforce` on /api/tier: flat, every value a string (empty when Make found nothing). */
@@ -18,9 +18,6 @@ export interface MakeSalesforce {
   parent_name?: string;
   account_parr?: string | number;
   parent_parr?: string | number;
-  // Account.Phone of the account and its parent: the main lines, so a lead's number that matches one isn't saved as theirs.
-  account_phone?: string;
-  parent_phone?: string;
   // The owner Make's own check picked: the deal owner for an open deal, the account owner for a customer.
   owner_id?: string;
   owner_name?: string;
@@ -56,9 +53,7 @@ export function toSfContext(raw: unknown): SfContext {
       id: accountId, name, label: text(m.account_label) ?? null, ownerId: text(m.account_owner_id), ownerName: text(m.account_owner_name),
       parentId: text(m.parent_id) ?? null, parentName: parentName ?? null,
       parr: districtParr({ Name: name, Total_PARR__c: num(m.account_parr), Parent: parentName ? { Name: parentName, Total_PARR__c: num(m.parent_parr) } : null }),
-      phones: accountPhones({ Phone: text(m.account_phone), Parent: { Phone: text(m.parent_phone) } }),
     };
-    if (!ctx.account.phones) delete ctx.account.phones;
   }
 
   const ownerName = text(m.owner_name);

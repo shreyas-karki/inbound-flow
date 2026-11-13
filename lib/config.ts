@@ -43,8 +43,6 @@ export const config = {
     timeoutMs: Number(env("STARBRIDGE_TIMEOUT_MS", "6000")),
   },
 
-  // Optional: a Make webhook that writes the number a lead confirms before booking onto their Salesforce Contact.
-  phoneWebhookUrl: env("MAKE_PHONE_WEBHOOK_URL"),
   slack: {
     webhookUrl: env("SLACK_WEBHOOK_URL"),
   },
