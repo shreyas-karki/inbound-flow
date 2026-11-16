@@ -20,7 +20,7 @@ const decided = {
 async function setup() {
   const store = memoryStore();
   await store.set(key, JSON.stringify(decided), 60);
-  const deps: VerifyDeps = { store, slack: vi.fn(async () => {}) };
+  const deps: VerifyDeps = { store, slack: vi.fn(async () => {}), saveSwitch: vi.fn(async () => {}) };
   return deps;
 }
 
@@ -53,6 +53,16 @@ describe("/api/verify", () => {
     expect(deps.slack).toHaveBeenCalledWith(
       ":email: *Dana W* (Curriculum Director) · [School District] Kearny (Kearny, NJ) switched to *dana@kearnyschools.com* before booking with Larry Dang. _The form had dana.w@gmail.com._",
     );
+    expect(deps.saveSwitch).toHaveBeenCalledWith({
+      form_email: "dana.w@gmail.com", school_email: "dana@kearnyschools.com", name: "Dana W", job_title: "Curriculum Director", school: "Kearny",
+    });
+  });
+
+  it("still unlocks when Make can't be reached", async () => {
+    const deps = await setup();
+    deps.saveSwitch = vi.fn(async () => { throw new Error("HTTP 500"); });
+    expect((await handleVerify({ email: "dana@kearnyschools.com", lead }, deps)).status).toBe(200);
+    expect(deps.slack).toHaveBeenCalled();
   });
 
   it("stays quiet in Slack when the lead keeps the form's email", async () => {
@@ -60,6 +70,7 @@ describe("/api/verify", () => {
     const same = { ...lead, email: "dana@kearnyschools.com" };
     expect((await handleVerify({ email: "dana@kearnyschools.com", lead: same }, deps)).status).toBe(200);
     expect(deps.slack).not.toHaveBeenCalled();
+    expect(deps.saveSwitch).not.toHaveBeenCalled();
   });
 
   it("a Slack failure doesn't block the lead", async () => {

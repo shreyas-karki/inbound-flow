@@ -47,6 +47,12 @@ export const config = {
     webhookUrl: env("SLACK_WEBHOOK_URL"),
   },
 
+  make: {
+    // Make 273855 "School email switch → Contact Email 2": when a lead books with a different email than the
+    // form's, it saves the new one on the Contact as Email 2 so David's booking sync can match the meeting.
+    emailSwitchUrl: env("MAKE_EMAIL_SWITCH_URL"),
+  },
+
   routing: {
     // Who signs the AI SDR reply and whose inbox the draft is meant for.
     replyFromName: env("REPLY_FROM_NAME", env("BDR_NAME", "Luis")),
