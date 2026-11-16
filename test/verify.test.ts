@@ -137,6 +137,30 @@ describe("/api/verify", () => {
     expect(deps.slack).toHaveBeenNthCalledWith(1, expect.stringContaining("Grades: 6-8, 9+."));
   });
 
+  it("stops the lead only when 9+ is the only range checked, for every combination and order", async () => {
+    const ranges = ["Pre-K-5", "6-8", "9+"];
+    const orders = (xs: string[]): string[][] => (xs.length <= 1 ? [xs] : xs.flatMap((x, i) => orders([...xs.slice(0, i), ...xs.slice(i + 1)]).map((rest) => [x, ...rest])));
+    const subsets = [1, 2, 3, 4, 5, 6, 7].map((mask) => ranges.filter((_, i) => mask & (1 << i)));
+    let cases = 0;
+    for (const picked of subsets.flatMap(orders)) {
+      const deps = await setup();
+      const out = await handleVerify({ email: "dana@kearnyschools.com", lead, grades: picked }, deps);
+      const onlyHigh = picked.length === 1 && picked[0] === "9+";
+      expect(out.body, picked.join("+")).toEqual(onlyHigh ? { ok: false, reason: "high_school" } : { ok: true, email: "dana@kearnyschools.com" });
+      expect(deps.checkOwner).toHaveBeenCalledTimes(onlyHigh ? 0 : 1);
+      cases++;
+    }
+    expect(cases).toBe(15); // 3 singles, 6 ordered pairs, 6 ordered triples
+    // What a page could also send: 9+ twice, or 9+ next to a range the page doesn't offer, is still high school only.
+    for (const grades of [["9+", "9+"], ["9+", "K-12"], ["9+", 7]]) {
+      expect((await handleVerify({ email: "dana@kearnyschools.com", lead, grades }, await setup())).body).toEqual({ ok: false, reason: "high_school" });
+    }
+    // Nothing usable (an older page, or junk) never blocks booking.
+    for (const grades of [undefined, [], ["K-12"], "9+", null]) {
+      expect((await handleVerify({ email: "dana@kearnyschools.com", lead, grades }, await setup())).body).toEqual({ ok: true, email: "dana@kearnyschools.com" });
+    }
+  });
+
   it("only knows the page's three ranges", () => {
     expect(parseGrades(["Pre-K-5", "6-8", "9+", "K-12", 4])).toEqual(["Pre-K-5", "6-8", "9+"]);
     expect(parseGrades(["K-12"])).toBeUndefined();
