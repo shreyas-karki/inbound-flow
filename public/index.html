@@ -308,6 +308,7 @@ $("#form").addEventListener("submit", async (e) => {
 
   form.hidden = true;
   $("#vWait").hidden = false;
+  try { sessionStorage.removeItem("verified"); } catch {} // a new lead: see handoff()
   try {
     render(await route(data), data);
   } catch (ex) {
@@ -339,6 +340,8 @@ async function handoff() {
     data.page_url = document.referrer || "https://forms.innovamat.com/request-samples/";
     // Keep the lead's details out of the address bar and browser history.
     history.replaceState(null, "", location.pathname);
+    // A new lead in this tab: an earlier lead's verified email must not unlock their calendar and skip the grades.
+    try { sessionStorage.removeItem("verified"); } catch {}
   }
   try {
     // A reload shows the same result instead of routing (and posting to Slack) twice.
