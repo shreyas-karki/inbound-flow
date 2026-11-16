@@ -101,11 +101,10 @@ body[data-booking] .card{width:min(100%,1200px);padding:0;overflow:hidden}
 /* grades dropdown (several can be checked): looks like the form's selects */
 .lbl{margin:0;font-weight:600;font-size:16px;line-height:1.2}
 .dd{position:relative}
-.dd summary{list-style:none;display:flex;align-items:center;height:56px;padding:0 40px 0 16px;border:1px solid var(--field);border-radius:2px;cursor:pointer;
+.dd-btn{font:inherit;color:var(--ink);text-align:left;width:100%;display:flex;align-items:center;height:56px;padding:0 40px 0 16px;border:1px solid var(--field);border-radius:2px;cursor:pointer;
   background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23222F2D' stroke-width='1.6'/%3E%3C/svg%3E") right 14px center no-repeat}
-.dd summary::-webkit-details-marker{display:none}
-.dd summary:focus-visible,.dd[open] summary{outline:2px solid var(--ink);outline-offset:1px}
-.dd[data-empty] summary{color:var(--faint)}
+.dd-btn:focus-visible,.dd-btn[aria-expanded="true"]{outline:2px solid var(--ink);outline-offset:1px}
+.dd[data-empty] .dd-btn{color:var(--faint)}
 .dd-panel{position:absolute;z-index:5;left:0;right:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--field);border-radius:8px;box-shadow:0 8px 24px rgba(34,47,45,.14);padding:6px}
 .dd-panel label{display:flex;align-items:center;gap:12px;padding:12px 10px;border-radius:6px;font-weight:500;cursor:pointer}
 .dd-panel label:hover{background:var(--soft)}
@@ -243,14 +242,16 @@ body[data-booking] .cal{height:max(720px,calc(100vh - 140px));border:0;border-ra
            and neither can high school only: Thinking Math! stops at grade 8. -->
       <form class="gate" data-gate="email" novalidate>
         <p class="lbl" id="grades_lbl">Grades you work with</p>
-        <details class="dd" data-empty>
-          <summary aria-labelledby="grades_lbl grades_val"><span id="grades_val" data-grades-value>Select all that apply</span></summary>
-          <div class="dd-panel" role="group" aria-labelledby="grades_lbl">
+        <!-- A button and a panel, not <details>: closing a <details> while a click inside it moves focus crashed
+             Chrome's tab (STATUS_BREAKPOINT, Nov 16 2026). -->
+        <div class="dd" data-empty>
+          <button type="button" class="dd-btn" aria-expanded="false" aria-controls="grades_panel" aria-labelledby="grades_lbl grades_val"><span id="grades_val" data-grades-value>Select all that apply</span></button>
+          <div class="dd-panel" id="grades_panel" role="group" aria-labelledby="grades_lbl" hidden>
             <label><input type="checkbox" name="grades" value="Pre-K-5">Pre-K-5</label>
             <label><input type="checkbox" name="grades" value="6-8">6-8</label>
             <label><input type="checkbox" name="grades" value="9+">9+</label>
           </div>
-        </details>
+        </div>
         <label for="verify_email">Your school or district email</label>
         <input id="verify_email" type="email" inputmode="email" autocomplete="email" placeholder="you@yourdistrict.org" required aria-describedby="verify_email_msg">
         <p class="hint" id="verify_email_msg">Use the email you'll book with. Personal emails like Gmail, Yahoo or AOL can't book a call.</p>
@@ -427,7 +428,7 @@ function qualified(out, data) {
   };
 
   // Grades they work with (several can be checked). At least one is needed to see the calendar.
-  const dd = $(".dd", view), ddValue = $("[data-grades-value]", view);
+  const dd = $(".dd", view), ddBtn = $(".dd-btn", view), ddPanel = $(".dd-panel", view), ddValue = $("[data-grades-value]", view);
   const gradeBoxes = [...view.querySelectorAll('input[name="grades"]')];
   const picked = () => gradeBoxes.filter((b) => b.checked).map((b) => b.value);
   const showGrades = () => {
@@ -435,10 +436,13 @@ function qualified(out, data) {
     ddValue.textContent = p.length ? p.join(", ") : "Select all that apply";
     dd.toggleAttribute("data-empty", !p.length);
   };
-  // The dropdown closes when they click or tab away from it, or press Escape.
-  document.addEventListener("click", (e) => { if (dd.open && !dd.contains(e.target)) dd.open = false; });
-  dd.addEventListener("focusout", (e) => { if (dd.open && !dd.contains(e.relatedTarget)) dd.open = false; });
-  dd.addEventListener("keydown", (e) => { if (e.key === "Escape" && dd.open) { dd.open = false; $("summary", dd).focus(); } });
+  const setOpen = (open) => { ddPanel.hidden = !open; ddBtn.setAttribute("aria-expanded", String(open)); };
+  ddBtn.addEventListener("click", () => setOpen(ddPanel.hidden));
+  // It closes when they click or tab to something else, or press Escape. Only once focus has landed elsewhere
+  // (focusin, click), never mid-change (focusout): clicking a grade's text briefly leaves nothing focused.
+  document.addEventListener("click", (e) => { if (!ddPanel.hidden && !dd.contains(e.target)) setOpen(false); });
+  document.addEventListener("focusin", (e) => { if (!ddPanel.hidden && !dd.contains(e.target)) setOpen(false); });
+  dd.addEventListener("keydown", (e) => { if (e.key === "Escape" && !ddPanel.hidden) { e.preventDefault(); ddBtn.focus(); setOpen(false); } });
 
   // The form's email when it's a school one; a personal one has to be swapped.
   const formEmail = String(data.email || "").trim();
@@ -503,6 +507,7 @@ function qualified(out, data) {
     step1.className = "on";
     step2.className = "";
     try { sessionStorage.removeItem("verified"); } catch {}
+    check(); // the button was left disabled by the last submit
     emailIn.focus();
   });
 
