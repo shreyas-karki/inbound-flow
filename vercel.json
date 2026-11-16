@@ -10,6 +10,9 @@
     },
     "api/warm.ts": {
       "maxDuration": 25
+    },
+    "api/verify.ts": {
+      "maxDuration": 15
     }
   }
 }

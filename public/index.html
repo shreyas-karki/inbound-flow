@@ -426,6 +426,14 @@ function qualified(out, data) {
     const email = emailIn.value.trim().toLowerCase();
     go.disabled = true;
     const res = await verify({ email, lead: data });
+    // The school email belongs to an account someone already owns (a customer or open deal routing missed):
+    // no calendar, their owner reaches out. Saved as the handoff result so a reload shows the same.
+    if (res.ok && res.owner) {
+      const owned = { ok: true, route: "owner", next: { type: "thanks", host: res.owner, message: res.message } };
+      try { sessionStorage.setItem("handoff", JSON.stringify({ data, out: owned })); sessionStorage.removeItem("verified"); } catch {}
+      delete document.body.dataset.booking;
+      return render(owned, data);
+    }
     // The server checks the same list. If it can't be reached, the page's own check already passed: let them book.
     if (res.ok || res.reason === "offline") return unlock(email);
     check();

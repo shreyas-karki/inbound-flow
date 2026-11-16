@@ -51,6 +51,12 @@ export const config = {
     // Make 273855 "School email switch → Contact Email 2": when a lead books with a different email than the
     // form's, it saves the new one on the Contact as Email 2 so David's booking sync can match the meeting.
     emailSwitchUrl: env("MAKE_EMAIL_SWITCH_URL"),
+    // Make 274239 "School email owner check for the booking page": finds the account behind the verified school
+    // email (that exact Contact, else the account most contacts at its domain belong to) and returns its owner
+    // when it has an active deal, open renewal or recent Closed Won (the same rule as 262495). The app can't read
+    // Salesforce itself (SSO). Unset: no check, the calendar unlocks as before.
+    ownerCheckUrl: env("MAKE_OWNER_CHECK_URL"),
+    ownerCheckTimeoutMs: Number(env("MAKE_OWNER_CHECK_TIMEOUT_MS", "6000")),
   },
 
   routing: {
