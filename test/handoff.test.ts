@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { memoryStore } from "../lib/decisions";
+import { decisionKey, memoryStore } from "../lib/decisions";
 import { saveHandoff, toSfContext, waitForHandoff } from "../lib/handoff";
-import { handleSubmission, type Deps } from "../lib/router";
+import { handleSubmission, parseSubmission, type Deps } from "../lib/router";
 import { createSalesforce } from "../lib/salesforce";
 import { mockScorer } from "../lib/score";
 import { mockDrafter } from "../lib/sdr";
@@ -100,6 +100,19 @@ describe("Make's Salesforce handoff", () => {
     expect(Date.now() - started).toBeLessThan(2500);
     expect(out.body).toMatchObject({ level: 2, route: "bdr", sf_source: "make", sf_match: "none" });
     expect(calls.lookup).toBe(0);
+  });
+
+  it("an owner from Make wins over an answer the page already cached without it", async () => {
+    // Udelia Gonzalez, Bakersfield City (Nov 15): the page decided before Make's handoff arrived, so Make got
+    // "Discovery, Vania's calendar" back while it DMed the account owner.
+    const { d } = deps({ handoffWaitMs: 100 });
+    expect((await handleTier(SECRET, fixture("level2"), d, SECRET)).body).toMatchObject({ route: "bdr" }); // decided without Make
+    const out = await handleTier(SECRET, { ...fixture("level2"), salesforce: AKRON }, d, SECRET);
+    expect(out.body).toMatchObject({ level: 3, route: "owner", host_name: "Eric Fontana", booking_url: null });
+    const sub = parseSubmission(fixture("level2").data);
+    if (!sub.success) throw new Error("fixture");
+    const cached = JSON.parse((await d.store.get(decisionKey(sub.data)))!);
+    expect(cached.decision.route).toBe("owner"); // what /api/verify and a reload now see
   });
 
   it("no handoff within the wait → the app's own lookup, as before", async () => {

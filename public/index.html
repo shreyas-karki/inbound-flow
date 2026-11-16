@@ -98,6 +98,19 @@ body[data-booking] .card{width:min(100%,1200px);padding:0;overflow:hidden}
 .gate .btn:disabled{background:#C5CFCD;opacity:1;cursor:not-allowed}
 .gate .btn svg{width:18px;height:18px}
 .gate .gerr{margin:0;color:var(--err);font-size:14px}
+/* grades dropdown (several can be checked): looks like the form's selects */
+.lbl{margin:0;font-weight:600;font-size:16px;line-height:1.2}
+.dd{position:relative}
+.dd summary{list-style:none;display:flex;align-items:center;height:56px;padding:0 40px 0 16px;border:1px solid var(--field);border-radius:2px;cursor:pointer;
+  background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23222F2D' stroke-width='1.6'/%3E%3C/svg%3E") right 14px center no-repeat}
+.dd summary::-webkit-details-marker{display:none}
+.dd summary:focus-visible,.dd[open] summary{outline:2px solid var(--ink);outline-offset:1px}
+.dd[data-empty] summary{color:var(--faint)}
+.dd-panel{position:absolute;z-index:5;left:0;right:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--field);border-radius:8px;box-shadow:0 8px 24px rgba(34,47,45,.14);padding:6px}
+.dd-panel label{display:flex;align-items:center;gap:12px;padding:12px 10px;border-radius:6px;font-weight:500;cursor:pointer}
+.dd-panel label:hover{background:var(--soft)}
+.dd-panel input{width:18px;height:18px;margin:0;padding:0;accent-color:var(--ink)}
+.gate .dd+label{margin-top:12px}
 .gate input[aria-invalid="true"]{border-color:var(--err)}
 .done-email{margin:0;padding:14px 16px;border-radius:12px;background:var(--surface);display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px}
 .done-email span{min-width:0;overflow-wrap:anywhere}
@@ -208,6 +221,11 @@ body[data-booking] .cal{height:max(720px,calc(100vh - 140px));border:0;border-ra
   <p class="sub">We'll send the details to <b data-email></b>.</p>
 </template>
 
+<template id="tHighSchool">
+  <h2>Thinking Math! is for Pre-K through 8th grade</h2>
+  <p class="sub">We don't have a program for grades 9 and up, so there's no call to book. Thanks for your interest in Innovamat!</p>
+</template>
+
 <template id="tBook">
   <h2 data-title></h2>
   <p class="sub" data-sub></p>
@@ -216,13 +234,23 @@ body[data-booking] .cal{height:max(720px,calc(100vh - 140px));border:0;border-ra
 <template id="tQualified">
   <div class="book">
     <div class="intro">
-      <ol class="steps" aria-label="Progress"><li class="on">School email</li><li>Pick a time</li></ol>
+      <ol class="steps" aria-label="Progress"><li class="on">Grades &amp; email</li><li>Pick a time</li></ol>
       <p class="eyebrow" data-eyebrow></p>
       <h2 data-title></h2>
       <p class="sub" data-sub></p>
       <img class="art" data-art alt="">
-      <!-- Step 1: their school email. Personal addresses (Gmail, AOL, …) can't book. -->
+      <!-- Step 1: the grades they work with and their school email. Personal addresses (Gmail, AOL, …) can't book,
+           and neither can high school only: Thinking Math! stops at grade 8. -->
       <form class="gate" data-gate="email" novalidate>
+        <p class="lbl" id="grades_lbl">Grades you work with</p>
+        <details class="dd" data-empty>
+          <summary aria-labelledby="grades_lbl grades_val"><span id="grades_val" data-grades-value>Select all that apply</span></summary>
+          <div class="dd-panel" role="group" aria-labelledby="grades_lbl">
+            <label><input type="checkbox" name="grades" value="Pre-K-5">Pre-K-5</label>
+            <label><input type="checkbox" name="grades" value="6-8">6-8</label>
+            <label><input type="checkbox" name="grades" value="9+">9+</label>
+          </div>
+        </details>
         <label for="verify_email">Your school or district email</label>
         <input id="verify_email" type="email" inputmode="email" autocomplete="email" placeholder="you@yourdistrict.org" required aria-describedby="verify_email_msg">
         <p class="hint" id="verify_email_msg">Use the email you'll book with. Personal emails like Gmail, Yahoo or AOL can't book a call.</p>
@@ -233,7 +261,7 @@ body[data-booking] .cal{height:max(720px,calc(100vh - 140px));border:0;border-ra
     <div class="calwrap" data-locked>
       <h3 data-cal-title></h3>
       <iframe class="cal" tabindex="-1"></iframe>
-      <div class="lock"><img src="/img/math-expert.webp" alt="" width="180" height="138"><p><b>Enter your school email</b> to see available times.</p></div>
+      <div class="lock"><img src="/img/math-expert.webp" alt="" width="180" height="138"><p><b>Pick your grades and enter your school email</b> to see available times.</p></div>
     </div>
   </div>
 </template>
@@ -248,12 +276,14 @@ const REQUIRED = ["name", "surname", "email", "phone_number", "school", "country
 const PERSONAL_DOMAINS = new Set(("gmail.com googlemail.com yahoo.com ymail.com rocketmail.com hotmail.com outlook.com live.com " +
   "msn.com aol.com aim.com icloud.com me.com mac.com comcast.net xfinity.com att.net sbcglobal.net bellsouth.net verizon.net " +
   "cox.net charter.net spectrum.net optonline.net earthlink.net frontier.com frontiernet.net windstream.net centurylink.net " +
-  "juno.com netzero.net roadrunner.com twc.com rogers.com shaw.ca sympatico.ca bell.net telus.net videotron.ca protonmail.com " +
-  "proton.me pm.me gmx.com gmx.us mail.com zoho.com yandex.com hey.com fastmail.com tutanota.com duck.com").split(" "));
+  "juno.com netzero.net roadrunner.com twc.com pacbell.net swbell.net ameritech.net flash.net prodigy.net nvbell.net snet.net " +
+  "wans.net embarqmail.com mchsi.com suddenlink.net mediacombb.net wowway.com q.com rogers.com shaw.ca sympatico.ca bell.net " +
+  "telus.net videotron.ca protonmail.com proton.me pm.me gmx.com gmx.us mail.com zoho.com yandex.com hey.com fastmail.com " +
+  "tutanota.com duck.com").split(" "));
 const isEmail = (e) => /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(e);
 function isPersonal(email) {
   const domain = String(email).trim().toLowerCase().split("@")[1] || "";
-  return PERSONAL_DOMAINS.has(domain) || /^(gmail|yahoo|hotmail|outlook|live|aol)\.[a-z.]+$/.test(domain);
+  return PERSONAL_DOMAINS.has(domain) || /^(gmail|yahoo|hotmail|outlook|live|aol)\.[a-z.]+$|(^|\.)rr\.com$/.test(domain);
 }
 
 $("#form").addEventListener("submit", async (e) => {
@@ -330,6 +360,9 @@ function render(out, data) {
     done.innerHTML = `<h2>Thanks, <span data-name></span>!</h2><p class="sub" data-msg></p>`;
     $("[data-name]", done).textContent = data.name || data.first_name || "";
     $("[data-msg]", done).textContent = next.message;
+  } else if (out.route === "high_school") {
+    // Picked only 9+ on the booking page: nothing to book.
+    done.append($("#tHighSchool").content.cloneNode(true));
   } else if (out.level === 0 || out.level === 1) {
     done.append($(out.level === 0 ? "#tLevel0" : "#tLevel1").content.cloneNode(true));
     $("[data-email]", done).textContent = data.email;
@@ -393,16 +426,32 @@ function qualified(out, data) {
     emailIn.setAttribute("aria-invalid", bad ? "true" : "false");
   };
 
+  // Grades they work with (several can be checked). At least one is needed to see the calendar.
+  const dd = $(".dd", view), ddValue = $("[data-grades-value]", view);
+  const gradeBoxes = [...view.querySelectorAll('input[name="grades"]')];
+  const picked = () => gradeBoxes.filter((b) => b.checked).map((b) => b.value);
+  const showGrades = () => {
+    const p = picked();
+    ddValue.textContent = p.length ? p.join(", ") : "Select all that apply";
+    dd.toggleAttribute("data-empty", !p.length);
+  };
+  // The dropdown closes when they click or tab away from it, or press Escape.
+  document.addEventListener("click", (e) => { if (dd.open && !dd.contains(e.target)) dd.open = false; });
+  dd.addEventListener("focusout", (e) => { if (dd.open && !dd.contains(e.relatedTarget)) dd.open = false; });
+  dd.addEventListener("keydown", (e) => { if (e.key === "Escape" && dd.open) { dd.open = false; $("summary", dd).focus(); } });
+
   // The form's email when it's a school one; a personal one has to be swapped.
   const formEmail = String(data.email || "").trim();
   emailIn.value = isEmail(formEmail) && !isPersonal(formEmail) ? formEmail : "";
   const check = () => {
     const e = emailIn.value.trim();
     const personal = isEmail(e) && isPersonal(e);
-    go.disabled = !isEmail(e) || personal;
+    go.disabled = !isEmail(e) || personal || !picked().length;
     say(personal ? "That's a personal email. Use your school or district email to book a call." : hint, personal);
   };
   emailIn.addEventListener("input", check);
+  gradeBoxes.forEach((b) => b.addEventListener("change", () => { showGrades(); check(); }));
+  showGrades();
   check();
   if (isPersonal(formEmail)) say(`${formEmail} is a personal email. Use your school or district email to book a call.`, true);
 
@@ -424,16 +473,21 @@ function qualified(out, data) {
     e.preventDefault();
     if (go.disabled) return;
     const email = emailIn.value.trim().toLowerCase();
+    const grades = picked();
     go.disabled = true;
-    const res = await verify({ email, lead: data });
-    // The school email belongs to an account someone already owns (a customer or open deal routing missed):
-    // no calendar, their owner reaches out. Saved as the handoff result so a reload shows the same.
-    if (res.ok && res.owner) {
-      const owned = { ok: true, route: "owner", next: { type: "thanks", host: res.owner, message: res.message } };
-      try { sessionStorage.setItem("handoff", JSON.stringify({ data, out: owned })); sessionStorage.removeItem("verified"); } catch {}
+    const res = await verify({ email, lead: data, grades });
+    // Instead of the calendar, saved as the handoff result so a reload shows the same.
+    const finish = (out) => {
+      try { sessionStorage.setItem("handoff", JSON.stringify({ data, out })); sessionStorage.removeItem("verified"); } catch {}
       delete document.body.dataset.booking;
-      return render(owned, data);
-    }
+      render(out, data);
+    };
+    // High school only: Thinking Math! stops at grade 8, so there's no call to book. Decided here too, so it holds
+    // even when the server can't be reached.
+    if (grades.length && grades.every((g) => g === "9+")) return finish({ ok: true, route: "high_school" });
+    // The school email belongs to an account someone already owns (a customer or open deal routing missed):
+    // no calendar, their owner reaches out.
+    if (res.ok && res.owner) return finish({ ok: true, route: "owner", next: { type: "thanks", host: res.owner, message: res.message } });
     // The server checks the same list. If it can't be reached, the page's own check already passed: let them book.
     if (res.ok || res.reason === "offline") return unlock(email);
     check();

@@ -3,8 +3,9 @@
 // something Make can route on, so a lead is never dropped; failures become Level 2 with fallback: true.
 import { timingSafeEqual } from "node:crypto";
 import { config } from "./config";
+import { DECISION_TTL_SEC, decisionKey } from "./decisions";
 import { saveHandoff, toSfContext } from "./handoff";
-import { decideLead, defaultDeps, log, parseSubmission, type Decided, type Deps } from "./router";
+import { decide, decideLead, defaultDeps, log, parseSubmission, type Decided, type Deps } from "./router";
 import { isDecisionMaker, isInternalTest } from "./rules";
 import { buildSlackHeader, buildSlackMessage } from "./slack";
 import { describeScore } from "./starbridge";
@@ -44,10 +45,21 @@ export async function handleTier(secret: string | undefined, raw: unknown, deps:
     // Park Make's Salesforce read for the lead's browser, which may be waiting on it right now, and use it here too.
     const handoff = req.salesforce === undefined ? undefined : toSfContext(typeof req.salesforce === "string" ? safeJson(req.salesforce) : req.salesforce);
     if (handoff) await saveHandoff(deps.store, sub.email, handoff);
-    const { value, cached } = await decideLead(sub, handoff ? { ...deps, handoff } : deps);
+    let { value, cached } = await decideLead(sub, handoff ? { ...deps, handoff } : deps);
+    // The lead's browser often decides first and only waits HANDOFF_WAIT_MS for this handoff; when Make is slower,
+    // that answer has no owner and Make would get it from the cache (a Bakersfield pilot teacher was shown a BDR
+    // calendar on Nov 15 2026 while Make DMed the account owner). An owner Make found always wins: decide again with
+    // it and replace the cached answer, so /api/verify keeps the calendar locked and a reload shows the owner.
+    let ownerOverride = false;
+    if (handoff?.existingOwner && value.decision.route !== "owner") {
+      value = await decide(sub, { ...deps, handoff });
+      try { await deps.store.set(decisionKey(sub), JSON.stringify(value), DECISION_TTL_SEC); } catch { /* the page just won't see it */ }
+      cached = false;
+      ownerOverride = true;
+    }
     const body = tierBody(sub, value, cached);
     log({
-      event: "tier", caller: "make", cached, email: sub.email, role: sub.job_title, school: sub.school, state: value.state,
+      event: "tier", caller: "make", cached, owner_override: ownerOverride, email: sub.email, role: sub.job_title, school: sub.school, state: value.state,
       level: value.decision.level, route: value.decision.route, source: value.decision.source, reason: value.decision.reason,
       host: value.host.name, host_source: value.host.source, page_name: req.page_name,
       sf_source: value.sf.source ?? "app", sf_handoff: Boolean(handoff), sf_owner: value.sf.existingOwner?.name,

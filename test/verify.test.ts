@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { decisionKey, memoryStore } from "../lib/decisions";
+import { saveHandoff } from "../lib/handoff";
 import { isPersonalEmail } from "../lib/email";
 import { emailDomain } from "../lib/salesforce";
-import { handleVerify, toOwnerHit, type VerifyDeps } from "../lib/verify";
+import { handleVerify, highSchoolOnly, parseGrades, toOwnerHit, type VerifyDeps } from "../lib/verify";
 import { SubmissionSchema } from "../lib/types";
 
 // The lead as the page holds it after the Unbounce handoff.
@@ -26,8 +27,8 @@ async function setup() {
 
 describe("personal email domains", () => {
   it("blocks free mail and internet-provider addresses, including country versions", () => {
-    for (const e of ["a@gmail.com", "a@AOL.com", "a@yahoo.co.uk", "a@hotmail.fr", "a@icloud.com", "a@comcast.net", "a@rogers.com"]) expect(isPersonalEmail(e)).toBe(true);
-    for (const e of ["a@kearnyschools.com", "a@schools.nyc.gov", "a@lakeview.k12.ny.us", "a@innovamat.com"]) expect(isPersonalEmail(e)).toBe(false);
+    for (const e of ["a@gmail.com", "a@AOL.com", "a@yahoo.co.uk", "a@hotmail.fr", "a@icloud.com", "a@comcast.net", "a@rogers.com", "ylnats@pacbell.net", "a@swbell.net", "a@nc.rr.com", "a@rr.com"]) expect(isPersonalEmail(e)).toBe(true);
+    for (const e of ["a@kearnyschools.com", "a@schools.nyc.gov", "a@lakeview.k12.ny.us", "a@innovamat.com", "a@pacificasd.org", "a@carr.com"]) expect(isPersonalEmail(e)).toBe(false);
   });
 
   it("never reads a district from a personal or internal domain", () => {
@@ -117,6 +118,53 @@ describe("/api/verify", () => {
       .toEqual({ name: "Carlo Andrea Bassani", why: "Customer, Closed Won", account: "[School District] Bakersfield City (Bakersfield, CA)", matchedBy: "email-domain" });
     expect(toOwnerHit({ owner_id: "", owner_name: "", matched_by: "none", account_id: null })).toBeUndefined();
     expect(toOwnerHit("Accepted")).toBeUndefined();
+  });
+
+  it("stops a high-school-only lead: no booking, no owner check, a Slack note", async () => {
+    const deps = await setup();
+    expect(await handleVerify({ email: "dana@kearnyschools.com", lead, grades: ["9+"] }, deps)).toEqual({ status: 200, body: { ok: false, reason: "high_school" } });
+    expect(deps.checkOwner).not.toHaveBeenCalled();
+    expect(deps.saveSwitch).not.toHaveBeenCalled();
+    expect(deps.slack).toHaveBeenCalledWith(
+      ":no_entry: *Dana W* (Curriculum Director) · [School District] Kearny (Kearny, NJ) only works in grades 9+ (dana@kearnyschools.com). The page said Thinking Math! is Pre-K to 8 and showed no calendar, so no call with Larry Dang will be booked.",
+    );
+  });
+
+  it("lets anyone with a Pre-K to 8 range book, and older pages that send no grades", async () => {
+    const deps = await setup();
+    expect((await handleVerify({ email: "dana@kearnyschools.com", lead, grades: ["6-8", "9+"] }, deps)).body).toEqual({ ok: true, email: "dana@kearnyschools.com" });
+    expect((await handleVerify({ email: "dana@kearnyschools.com", lead }, deps)).body).toEqual({ ok: true, email: "dana@kearnyschools.com" });
+    expect(deps.slack).toHaveBeenNthCalledWith(1, expect.stringContaining("Grades: 6-8, 9+."));
+  });
+
+  it("only knows the page's three ranges", () => {
+    expect(parseGrades(["Pre-K-5", "6-8", "9+", "K-12", 4])).toEqual(["Pre-K-5", "6-8", "9+"]);
+    expect(parseGrades(["K-12"])).toBeUndefined();
+    expect(parseGrades("9+")).toBeUndefined();
+    expect(highSchoolOnly(["9+"])).toBe(true);
+    expect(highSchoolOnly(["Pre-K-5", "9+"])).toBe(false);
+    expect(highSchoolOnly(undefined)).toBe(false);
+  });
+
+  it("keeps the calendar locked when routing already routed the lead to an owner, without asking Make again", async () => {
+    const deps = await setup();
+    await deps.store.set(key, JSON.stringify({
+      ...decided,
+      sf: { matchedBy: "account-name", account: { id: "001", name: "[School District] Kearny (Kearny, NJ)" }, existingOwner: { name: "Carlo Andrea Bassani", why: "Open deal in Pilot" } },
+      decision: { level: 3, route: "owner", reason: "", source: "rules" },
+      host: { name: "Carlo Andrea Bassani", alsoAdd: [], source: "salesforce" },
+    }), 60);
+    expect((await handleVerify({ email: "dana@kearnyschools.com", lead }, deps)).body).toMatchObject({ owner: "Carlo Andrea Bassani" });
+    expect(deps.checkOwner).not.toHaveBeenCalled();
+  });
+
+  it("uses Make's Salesforce handoff when it named an owner the page never heard about", async () => {
+    // Udelia Gonzalez, Bakersfield City (Nov 15): Make found Carlo, but the page had already shown Vania's calendar.
+    const deps = await setup();
+    await saveHandoff(deps.store, "dana.w@gmail.com", { matchedBy: "account-name", source: "make", existingOwner: { name: "Carlo Andrea Bassani", why: "Customer, Closed Won" } });
+    expect((await handleVerify({ email: "dana@kearnyschools.com", lead }, deps)).body).toMatchObject({ owner: "Carlo Andrea Bassani" });
+    expect(deps.checkOwner).not.toHaveBeenCalled();
+    expect(deps.slack).toHaveBeenCalledWith(expect.stringContaining("an account owned by *Carlo Andrea Bassani* (Customer, Closed Won)"));
   });
 
   it("a Slack failure doesn't block the lead", async () => {

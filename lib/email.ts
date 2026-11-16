@@ -10,6 +10,10 @@ export const PERSONAL_DOMAINS = new Set([
   "comcast.net", "xfinity.com", "att.net", "sbcglobal.net", "bellsouth.net", "verizon.net", "cox.net", "charter.net",
   "spectrum.net", "optonline.net", "earthlink.net", "frontier.com", "frontiernet.net", "windstream.net", "centurylink.net",
   "juno.com", "netzero.net", "roadrunner.com", "twc.com",
+  // Old AT&T / Bell addresses people still use (a Pacific Bell address came through as a "school" email, Nov 2026)
+  "pacbell.net", "swbell.net", "ameritech.net", "flash.net", "prodigy.net", "nvbell.net", "snet.net", "wans.net",
+  // Other US cable and rural providers
+  "embarqmail.com", "mchsi.com", "suddenlink.net", "mediacombb.net", "wowway.com", "q.com",
   // Canadian providers
   "rogers.com", "shaw.ca", "sympatico.ca", "bell.net", "telus.net", "videotron.ca",
   // Privacy and other free mail
@@ -17,8 +21,9 @@ export const PERSONAL_DOMAINS = new Set([
   "fastmail.com", "tutanota.com", "duck.com",
 ]);
 
-// Country versions: yahoo.co.uk, hotmail.fr, outlook.es, live.ca and so on.
-const PERSONAL_FAMILIES = /^(gmail|yahoo|hotmail|outlook|live|aol)\.[a-z.]+$/;
+// Country versions: yahoo.co.uk, hotmail.fr, outlook.es, live.ca and so on. Plus Roadrunner's regional
+// addresses (nc.rr.com, tampabay.rr.com, …).
+const PERSONAL_FAMILIES = /^(gmail|yahoo|hotmail|outlook|live|aol)\.[a-z.]+$|(^|\.)rr\.com$/;
 
 export function normalizeEmail(raw: unknown): string {
   return typeof raw === "string" ? raw.trim().toLowerCase() : "";
