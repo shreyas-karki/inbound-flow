@@ -73,6 +73,8 @@ export interface StarbridgeResult {
   stateCode?: string; // e.g. "NY"; picks the state-specific line in the reply
   account?: AccountScore; // undefined = not in the target market, or lookup failed
   source: "stub" | "starbridge" | "timeout" | "error";
+  /** The search was narrowed to a state, so "no district found" can be trusted and cached (lib/starbridge.ts). */
+  searchedWithState?: boolean;
 }
 
 export type RoleGroup = "decision_maker" | "champion" | "coach" | "end_user" | "other";

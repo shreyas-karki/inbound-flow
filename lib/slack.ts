@@ -32,7 +32,9 @@ export function buildSlackHeader(sub: Submission, sb: StarbridgeResult, decision
     email: `:email: No meeting yet: they get an email asking who picks math curriculum.`,
   }[decision.route];
   return [
-    `${isInternalTest(sub.email) ? ":test_tube: *TEST* · " : ""}${LEVEL_EMOJI[decision.level]} *Level ${decision.level} · ${label}* · New physical sample request :package:`,
+    // An owner hand-off isn't a score: the lead skipped scoring because someone already owns the account. Printing
+    // it as "Level 3" made the team ask why teachers were Level 3 (Nov 18 2026), so it carries no level.
+    `${isInternalTest(sub.email) ? ":test_tube: *TEST* · " : ""}${decision.route === "owner" ? `:lock: *${label} · the owner follows up*` : `${LEVEL_EMOJI[decision.level]} *Level ${decision.level} · ${label}*`} · New physical sample request :package:`,
     `_${decision.reason}_ (${decision.source})`,
     routeLine,
     host?.alsoAdd.length ? `:busts_in_silhouette: Also add to the call: ${host.alsoAdd.join(", ")}` : undefined,

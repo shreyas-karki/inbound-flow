@@ -140,15 +140,33 @@ export function starbridgeKey(school: string, domain?: string): string {
   return ["sb", school.trim().toLowerCase(), domain ?? ""].join("|");
 }
 
-/** lookupAccountScore with a day-long cache. Timeouts and errors aren't kept, so the next lead tries again. */
-export async function cachedAccountScore(store: Store, school: string, stateCode?: string, domain?: string, timeoutMs?: number): Promise<StarbridgeResult> {
+/**
+ * lookupAccountScore with a day-long cache. Timeouts and errors aren't kept, so the next lead tries again.
+ *
+ * A search that found no district is only trusted when it was narrowed to a state. The Unbounce form has no
+ * State field, so /api/warm searches the whole country, where a common name returns ten cities and schools and
+ * no district ("Oak Ridge" on Nov 17 2026: Oak Ridge City School District, TN, 4,757 students, never made the
+ * list). That miss used to be cached for a day and reused at submit, when the state is known from Salesforce,
+ * so the lead was routed and posted to Slack with "No Starbridge match".
+ */
+export async function cachedAccountScore(
+  store: Store, school: string, stateCode?: string, domain?: string, timeoutMs?: number,
+  lookup: typeof lookupAccountScore = lookupAccountScore,
+): Promise<StarbridgeResult> {
   const key = starbridgeKey(school, domain);
+  const found = (r: StarbridgeResult) => Boolean(r.buyerName || r.account);
   try {
     const hit = await store.get(key);
-    if (hit) return JSON.parse(hit) as StarbridgeResult;
+    if (hit) {
+      const cached = JSON.parse(hit) as StarbridgeResult;
+      // A match is always reused. A miss is reused unless it came from a search with no state and the state is known now.
+      if (found(cached) || cached.searchedWithState || !stateCode) return cached;
+    }
   } catch { /* cache trouble never blocks a lead */ }
-  const out = await lookupAccountScore(school, stateCode, domain, timeoutMs);
-  if (out.source === "starbridge" || out.source === "stub") {
+  const looked = await lookup(school, stateCode, domain, timeoutMs);
+  const out: StarbridgeResult = stateCode ? { ...looked, searchedWithState: true } : looked;
+  const keep = (out.source === "starbridge" || out.source === "stub") && (found(out) || Boolean(stateCode));
+  if (keep) {
     try { await store.set(key, JSON.stringify(out), CACHE_TTL_SEC); } catch { /* ignore */ }
   }
   return out;
@@ -166,5 +184,9 @@ export function describeScore(sb: StarbridgeResult): string {
     a.mathProficiencyPct !== undefined && `${a.mathProficiencyPct}% math proficient`,
     a.propensityToSpend && `spend: ${a.propensityToSpend}`,
   ].filter(Boolean);
-  return `Account Score ${a.score}/100 · Fit ${a.fitBand} · Signals ${a.signalBand}${facts.length ? ` · ${facts.join(" · ")}` : ""}`;
+  // A district Starbridge knows but hasn't scored comes back with an empty score and fit (Madison, CT printed
+  // "Account Score /100 · Fit  · Signals NoSignals").
+  const scored = typeof a.score === "number" && Number.isFinite(a.score);
+  const head = scored ? `Account Score ${a.score}/100 · Fit ${a.fitBand || "unknown"} · Signals ${a.signalBand || "unknown"}` : `Not scored yet${a.signalBand ? ` · Signals ${a.signalBand}` : ""}`;
+  return `${head}${facts.length ? ` · ${facts.join(" · ")}` : ""}`;
 }

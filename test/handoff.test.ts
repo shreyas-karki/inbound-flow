@@ -59,6 +59,7 @@ describe("Make's Salesforce handoff", () => {
     });
     expect(out.body.reason).toBe("Open deal in Follow-up. Routed to Eric Fontana.");
     expect(out.body.slack_header).toContain("Existing account");
+    expect(out.body.slack_header).not.toMatch(/Level \d/); // a hand-off to the owner isn't a score
     expect(calls.lookup).toBe(0); // the app's own (SSO-blocked) lookup never runs
   });
 
@@ -113,6 +114,23 @@ describe("Make's Salesforce handoff", () => {
     if (!sub.success) throw new Error("fixture");
     const cached = JSON.parse((await d.store.get(decisionKey(sub.data)))!);
     expect(cached.decision.route).toBe("owner"); // what /api/verify and a reload now see
+  });
+
+  it("Make's district arriving after the page decided is used: a teacher at a very large district is lifted to Discovery", async () => {
+    // Internal test, Cicero SD 99 (Nov 18): the page waited 8 s, scored with no district and showed Level 1;
+    // Make's handoff with $604k PARR landed under a second later and got the cached Level 1 back.
+    const { d, calls } = deps({ handoffWaitMs: 50, scorer: async () => ({ level: 1, route: "email", reason: "Teacher, no signal.", source: "claude" }) });
+    const lead = { ...fixture("level2"), data: { ...fixture("level2").data, school: ["Cicero SD 99 - Cicero, Cook County"], state: [""], message: [""], when_is_your_district_planning_to_adopt_a_new_math_curriculum: ["I'm not sure"] } };
+    const page = await handleSubmission({ ...lead.data, page_url: lead.page_url }, { ...d, salesforce: { ...d.salesforce, lookup: async () => { throw new Error("SSO"); } } });
+    await page.background;
+    expect(page.body).toMatchObject({ level: 1 });
+    const CICERO = { ...NOTHING, matched_by: "account-name", account_id: "0017Q00000mdpF0QAI", account_name: "[School District] Cicero SD 99 (Cicero, IL)", account_parr: "604162" };
+    const out = await handleTier(SECRET, { ...lead, salesforce: CICERO }, d, SECRET);
+    expect(out.body).toMatchObject({ level: 2, route: "bdr", cached: false, sf_source: "make", state: "Illinois" });
+    expect(out.body.reason).toContain("The lead's page showed Level 1");
+    expect(calls.lookup).toBe(0);
+    // Asked again (a Make retry), the answer is the stored one and isn't rescored.
+    expect((await handleTier(SECRET, { ...lead, salesforce: CICERO }, d, SECRET)).body).toMatchObject({ level: 2, cached: true });
   });
 
   it("no handoff within the wait → the app's own lookup, as before", async () => {

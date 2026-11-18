@@ -50,16 +50,25 @@ export async function handleTier(secret: string | undefined, raw: unknown, deps:
     // that answer has no owner and Make would get it from the cache (a Bakersfield pilot teacher was shown a BDR
     // calendar on Nov 15 2026 while Make DMed the account owner). An owner Make found always wins: decide again with
     // it and replace the cached answer, so /api/verify keeps the calendar locked and a reload shows the owner.
-    let ownerOverride = false;
-    if (handoff?.existingOwner && value.decision.route !== "owner") {
+    // The same race without an owner is the common case: in Nov 2026 two in three leads were scored by the page with
+    // no district, no PARR and no state, because Make's handoff landed just after the page stopped waiting. When
+    // Make's handoff names the account and the cached answer was made without it, decide again with it too. Make
+    // acts on this answer (Slack, Salesforce, the email), so the reason says what the page showed if that differs.
+    const lateOwner = Boolean(handoff?.existingOwner) && value.decision.route !== "owner";
+    const lateAccount = cached && Boolean(handoff?.account) && value.sf.source !== "make";
+    const ownerOverride = lateOwner;
+    if (handoff && (lateOwner || lateAccount)) {
+      const shown = value.decision;
       value = await decide(sub, { ...deps, handoff });
+      if (value.decision.route !== "owner" && value.decision.level !== shown.level) {
+        value = { ...value, decision: { ...value.decision, reason: `${value.decision.reason} The lead's page showed Level ${shown.level}: Salesforce data arrived after it decided.` } };
+      }
       try { await deps.store.set(decisionKey(sub), JSON.stringify(value), DECISION_TTL_SEC); } catch { /* the page just won't see it */ }
       cached = false;
-      ownerOverride = true;
     }
     const body = tierBody(sub, value, cached);
     log({
-      event: "tier", caller: "make", cached, owner_override: ownerOverride, email: sub.email, role: sub.job_title, school: sub.school, state: value.state,
+      event: "tier", caller: "make", cached, owner_override: ownerOverride, late_handoff: lateOwner || lateAccount, email: sub.email, role: sub.job_title, school: sub.school, state: value.state,
       level: value.decision.level, route: value.decision.route, source: value.decision.source, reason: value.decision.reason,
       host: value.host.name, host_source: value.host.source, page_name: req.page_name,
       sf_source: value.sf.source ?? "app", sf_handoff: Boolean(handoff), sf_owner: value.sf.existingOwner?.name,
