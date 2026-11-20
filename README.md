@@ -66,7 +66,7 @@ For the A/B test (steps in [LAUNCH.md](LAUNCH.md)), a new Make scenario receives
 - **A State GM with no calendar yet:** Level 3 books on the first contributor who has one, and the GM is added to the call. If nobody does, the lead hears "someone will reach out".
 - **Calendar titles matter:** Salesforce logs a booking on "Let's Talk Math w/ Innovamat" as a First Touch and one on "Let's Talk Math" as a Discovery Meeting. The link in `calendar_links` must be each GM's 30-minute "Let's Talk Math w/ Innovamat" schedule.
 - **Links:** `calendar.app.google` short links are expanded automatically. Full links work with or without `/u/0/`. A person without a working link gets "someone will reach out" instead of a calendar.
-- **Careful:** Make scenario 172177 reads columns A and C of `Mapping`. Only add columns or tabs there.
+- **Careful:** Make reads two tabs by column position, so only add columns or tabs. Since Nov 18, scenarios 172177, 178983 and 218210 read columns A (State) and F (Discovery ID) of `ft_owners`, and take the `Other` row as the fallback owner. Scenarios 262495, 263508 and 248484 still read columns A and C of `Mapping`.
 
 ## What it writes to Salesforce
 

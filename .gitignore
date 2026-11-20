@@ -6,3 +6,6 @@ node_modules
 # Make scenario exports: Salesforce, Slack and connection IDs. Keep out of git.
 *.blueprint.json
 .env copy
+
+# Lead exports (names, emails, phones). The repo is public: never commit them.
+*.csv
