@@ -37,15 +37,14 @@ export function applyRules(sub: Submission, sf: SfContext, sb?: StarbridgeResult
     return { level: 0, route: "email", reason: `Role "${sub.job_title}" is not a buyer.`, source: "rules" };
   }
 
-  const director = directorFirstTouch(sub, sf, sb);
-  if (director) return director;
+  const gm = gmRoleDecision(sub, sf, sb);
+  if (gm) return gm;
 
-  // GM fast lane: a hot, sizable district adopting soon, and anyone there who isn't a teacher.
+  // GM fast lane: a champion outside gmRoles at a hot, sizable district adopting soon.
   const a = sb?.account;
   const { signalBands, minEnrollment, adoptionTimelines } = rulesConfig.firstTouch;
-  const group = roleGroup(sub.job_title);
   if (
-    a && group !== "end_user" && group !== "other" &&
+    a && roleGroup(sub.job_title) === "champion" && !isBuildingLeader(sub.job_title) &&
     signalBands.includes(a.signalBand) && (a.enrollment ?? 0) >= minEnrollment &&
     adoptionTimelines.includes(sub.adoption_timeline)
   ) {
@@ -74,25 +73,34 @@ function districtSize(sf: SfContext, sb?: StarbridgeResult): { label: string; sm
 }
 
 /**
- * A curriculum director goes to the GM when the district clears the size floor (WHY NOW or not), or when they're
- * adopting SY26-27 / SY27-28 (at any size, or with no size data at all).
+ * District decision makers and math directors/coordinators: a First Touch with the growth manager, WHY NOW or not and
+ * whatever the Starbridge score, unless the district is under the size floor, which makes it a BDR Discovery.
+ * No size data counts as clearing the floor.
  */
-function directorFirstTouch(sub: Submission, sf: SfContext, sb?: StarbridgeResult): Decision | null {
-  if (!rulesConfig.directorFirstTouch.roles.includes(sub.job_title)) return null;
+function gmRoleDecision(sub: Submission, sf: SfContext, sb?: StarbridgeResult): Decision | null {
+  if (!isGmRole(sub.job_title)) return null;
   const size = districtSize(sf, sb);
-  const soon = adoptingSoon(sub);
-  if (!soon && (!size || size.small)) return null;
-  const why = [soon && `adopting ${sub.adoption_timeline}`, size && `at a district with ${size.label}`].filter(Boolean).join(" ");
-  return { level: 3, route: "gm", reason: `${sub.job_title} ${why}: always a First Touch with the growth manager.`, source: "rules" };
+  if (size?.small) {
+    return { level: 2, route: "bdr", reason: `${sub.job_title} at a small district (${size.label}): BDR Discovery.`, source: "rules" };
+  }
+  const at = size ? ` at a district with ${size.label}` : "";
+  return { level: 3, route: "gm", reason: `${sub.job_title}${at}: always a First Touch with the growth manager.`, source: "rules" };
+}
+
+export function isGmRole(role: string): boolean {
+  return rulesConfig.gmRoles.includes(role);
+}
+
+export function isBuildingLeader(role: string): boolean {
+  return rulesConfig.buildingLeaderRoles.includes(role);
 }
 
 /**
  * Runs after rules and Claude: a First Touch at a small or low-scoring district becomes a BDR Discovery.
- * A curriculum director keeps it, whatever the Starbridge score, at a district that clears the size floor or
- * when adopting soon.
+ * gmRoles already had the size floor applied by the rules, and skip the Starbridge score check.
  */
 export function capFirstTouch(decision: Decision, sub: Submission, sf: SfContext, sb: StarbridgeResult): Decision {
-  if (decision.route !== "gm" || directorFirstTouch(sub, sf, sb)) return decision;
+  if (decision.route !== "gm" || isGmRole(sub.job_title)) return decision;
   const size = districtSize(sf, sb);
   const { minScore } = rulesConfig.firstTouchFloor;
   const why = [
@@ -103,21 +111,59 @@ export function capFirstTouch(decision: Decision, sub: Submission, sf: SfContext
   return { ...decision, level: 2, route: "bdr", meeting: "discovery", reason: `${decision.reason} Capped at Discovery: ${why}.` };
 }
 
-/**
- * Backstop for Claude: a teacher with no message and no hot district has no signal beyond their own adoption
- * answer, so the rubric keeps them at Level 1. Runs before the PARR rules, so a very large district still lifts them.
- */
-export function capTeacherWithoutSignal(decision: Decision, sub: Submission, sb: StarbridgeResult): Decision {
-  if (decision.source !== "claude" || decision.level < 2 || roleGroup(sub.job_title) !== "end_user") return decision;
-  if (sub.needs.trim() || isHotDistrict(sb)) return decision;
-  return { ...decision, level: 1, route: routeForLevel(1), meeting: meetingForLevel(1), reason: `${decision.reason} Kept at Level 1: a teacher's adoption date alone isn't a signal.` };
+function setLevel(decision: Decision, level: Level, note: string): Decision {
+  return { ...decision, level, route: routeForLevel(level), meeting: meetingForLevel(level), reason: `${decision.reason} ${note}` };
 }
 
-/** Runs after the First Touch floor: a Level 1 lead at a very large district becomes a BDR Discovery. */
-export function liftLargeDistrict(decision: Decision, sf: SfContext): Decision {
-  const parr = sf.account?.parr;
-  if (decision.level !== 1 || parr === undefined || parr < rulesConfig.largeDistrict.minParr) return decision;
-  return { ...decision, level: 2, route: "bdr", meeting: "discovery", reason: `${decision.reason} Lifted to Discovery: very large district ($${Math.round(parr).toLocaleString("en-US")} PARR).` };
+/** What makes a teacher worth a Discovery, or undefined. See rulesConfig.teacherDiscovery. */
+export function teacherReviewSignal(sub: Submission, sb: StarbridgeResult): string | undefined {
+  const { reviewWords, signalBands } = rulesConfig.teacherDiscovery;
+  if (reviewWords.test(sub.needs)) return "their message mentions the curriculum review";
+  if (adoptingSoon(sub)) return `adopting ${sub.adoption_timeline}`;
+  const band = sb.account?.signalBand;
+  if (band && signalBands.includes(band)) return `a ${band.toLowerCase()} district in Starbridge`;
+  return undefined;
+}
+
+/**
+ * Runs after rules and Claude (and the Level 2 fallback), before the First Touch floor. Who gets which meeting is a
+ * sales decision, so it is fixed here rather than left to Claude:
+ * - teachers: a BDR Discovery only with a review signal at a district under $150k PARR (or no PARR); else Level 1.
+ * - coaches/TOSAs: always a BDR Discovery.
+ * - building leaders (principal, AP): at least a BDR Discovery; a First Touch only for a principal Claude judged to
+ *   decide for the whole school, never for an AP.
+ * Level 0 (Claude saw a non-buyer) and existing owners are left alone.
+ */
+export function applyLevelPolicy(decision: Decision, sub: Submission, sf: SfContext, sb: StarbridgeResult): Decision {
+  if (decision.route === "owner" || decision.level === 0) return decision;
+  const role = sub.job_title;
+  const group = roleGroup(role);
+
+  if (group === "end_user") {
+    const parr = sf.account?.parr;
+    const { maxParr } = rulesConfig.teacherDiscovery;
+    const signal = teacherReviewSignal(sub, sb);
+    const big = parr !== undefined && parr >= maxParr;
+    const ok = signal && !big;
+    const level: Level = ok ? 2 : 1;
+    if (level === decision.level) return decision;
+    const why = ok
+      ? `Discovery: teacher with a review signal (${signal}) at a district under $${maxParr / 1000}k PARR.`
+      : signal
+        ? `Level 1: teacher at a district with $${Math.round(parr!).toLocaleString("en-US")} PARR, where teachers have little say.`
+        : "Level 1: teacher with no curriculum-review signal.";
+    return setLevel(decision, level, why);
+  }
+
+  if (group === "coach") {
+    return decision.level === 2 ? decision : setLevel(decision, 2, "Coaches and TOSAs get a BDR Discovery.");
+  }
+
+  if (isBuildingLeader(role)) {
+    if (decision.level === 1) return setLevel(decision, 2, "Building leaders get at least a BDR Discovery.");
+    if (decision.level === 3 && role !== "Principal") return setLevel(decision, 2, "Assistant principals get a BDR Discovery.");
+  }
+  return decision;
 }
 
 /** Innovamat staff testing the form: scored like a real lead, but flagged and never written to Salesforce. */

@@ -104,10 +104,12 @@ describe("/api/tier", () => {
     expect(out.body).toMatchObject({ level: 2, host_name: "Luis Acevedo" });
   });
 
-  it("a scorer error becomes Level 2 with fallback: true", async () => {
+  it("a scorer error becomes Level 2 with fallback: true, except for teachers, whose level the rules decide", async () => {
     const broken: Scorer = async () => { throw new Error("Claude down"); };
-    const out = await handleTier(SECRET, fixture("level1"), deps({ scorer: broken }).d, SECRET);
-    expect(out.body).toMatchObject({ ok: true, level: 2, route: "bdr", fallback: true });
+    const f = fixture("level1");
+    const principal = { ...f, data: { ...f.data, user_profile: ["Principal"] } };
+    expect((await handleTier(SECRET, principal, deps({ scorer: broken }).d, SECRET)).body).toMatchObject({ ok: true, level: 2, route: "bdr", fallback: true });
+    expect((await handleTier(SECRET, f, deps({ scorer: broken }).d, SECRET)).body).toMatchObject({ ok: true, level: 1, route: "email", fallback: true });
   });
 
   it("incomplete form data still answers 200 with the Level 2 fallback", async () => {

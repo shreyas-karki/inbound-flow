@@ -102,10 +102,10 @@ export const rulesConfig = {
   servedCountries: ["United States of America", "Canada"],
   // Roles that never buy a district curriculum: Level 0. Values are Salesforce Role__c picklist values.
   level0Roles: ["Parent or Homeschooler", "Press", "Politician", "University", "Consultant / Advisor"],
-  // Who is who, from the US deal-stage framework. Decision makers with a WHY NOW get a First Touch (Level 3,
-  // growth manager); so do champions running an active review. Other champions get a Discovery (Level 2, BDR).
-  // End users get a Discovery only with an evaluation signal or a hot district (their adoption answer alone
-  // doesn't count); otherwise Level 1 asks them to loop in a principal / AP / district contact.
+  // Who is who, from the US deal-stage framework. Since Nov 24 2026 (Prynce, after BDR feedback that Level 2/3 were
+  // too loose): district decision makers and math directors/coordinators go to a growth manager (gmRoles), coaches
+  // and building leaders get a BDR Discovery, and a teacher gets one only with a curriculum-review signal at a
+  // district under $150k PARR (teacherDiscovery). Everything else is Level 1.
   decisionMakerRoles: [
     "Superintendent",
     "Assistant Superintendent",
@@ -128,8 +128,36 @@ export const rulesConfig = {
     "Director of Special Education",
     "Vice Principal",
   ],
-  // GM fast lane: anyone who isn't a teacher goes straight to a First Touch when the district is
-  // hot, sizable and adopting soon. Everything else is scored by Claude with prompts/rubric.md.
+  // People who can move fast and have a say at the district: always a First Touch with the growth manager, with or
+  // without a WHY NOW and whatever the Starbridge score, unless the district is under the size floor below (then a
+  // BDR Discovery). No size data at all counts as clearing the floor.
+  gmRoles: [
+    "Superintendent",
+    "Assistant Superintendent",
+    "Assistant Superintendent - Instruction/Curriculum",
+    "Assistant Superintendent - Teaching and Learning",
+    "Chief Academic Officer",
+    "Curriculum Director",
+    "Director of Teaching & Learning",
+    "District Administrator",
+    "Math / STEM Director",
+    "Math Director",
+    "Math / STEM Coordinator",
+  ],
+  // Worth a BDR Discovery even though they don't sign: never Level 1, and never a First Touch. A Principal who decides
+  // for the whole school (NYC, charter, private, single-school district) is a decision maker, so Claude may still give
+  // them a First Touch; the size floor applies.
+  buildingLeaderRoles: ["Principal", "Vice Principal", "Assistant Principal"],
+  // A teacher gets a BDR Discovery only when both hold; otherwise Level 1. At bigger districts teachers have little say.
+  // A signal is: their message mentions the review, they answer SY26-27 / SY27-28 to the adoption question, or
+  // Starbridge has the district in one of signalBands. Missing PARR passes. Teachers never get a First Touch.
+  teacherDiscovery: {
+    maxParr: 150000, // Salesforce Total PARR, USD (district)
+    signalBands: ["Hot"],
+    reviewWords: /\b(curricul\w*|adopt\w*|review\w*|committee|pilot\w*|evaluat\w*|RFP)\b/i,
+  },
+  // GM fast lane: a champion outside gmRoles (Early Childhood, MTSS, Title I…) goes straight to a First Touch when the
+  // district is hot, sizable and adopting soon. Everything else is scored by Claude with prompts/rubric.md.
   firstTouch: {
     signalBands: ["Hot"], // Starbridge signal band
     minEnrollment: 5000, // "sizable": Starbridge total enrollment
@@ -145,20 +173,8 @@ export const rulesConfig = {
     minEnrollment: 650, // ~$30k PARR at ~$46 per student; used only without PARR
     minScore: 50, // Starbridge account score, 0-100
   },
-  // These roles always get the growth manager's calendar, whatever the Starbridge score, when either:
-  // - the district clears the size floor above ($30k+ PARR, or 650+ students without PARR), WHY NOW or not, or
-  // - they're adopting SY26-27 or SY27-28, at any district size (this overrides the floor).
-  // Kearny, NJ (Nov 2): a Curriculum Director at $209,720 PARR adopting SY28-29 got a BDR Discovery instead.
-  directorFirstTouch: {
-    roles: ["Curriculum Director"],
-  },
-  // A very large district always enters the funnel: anyone there who would only get the Level 1 email
-  // (a teacher with no signal, say) gets a BDR Discovery instead. Level 0 non-buyers stay Level 0.
-  largeDistrict: {
-    minParr: 500000, // Salesforce Total PARR, USD
-  },
-  // Coaches and TOSAs work across classrooms and sit close to curriculum decisions: they can always
-  // book a Discovery, and a First Touch when the district is hot.
+  // Coaches and TOSAs work across classrooms and sit close to curriculum decisions: always a BDR Discovery, never
+  // Level 1 and never a First Touch.
   coachRoles: [
     "Instructional Coach",
     "Math Coach",

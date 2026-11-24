@@ -41,9 +41,9 @@ describe("handleSubmission (mock mode)", () => {
     expect(draft?.gmailUrl).toContain("mail.google.com");
   });
 
-  it("instructional coach at a hot district, no adoption date → Level 3 First Touch", async () => {
+  it("instructional coach at a hot district → Level 2 Discovery: coaches never get a First Touch", async () => {
     const out = await handleSubmission({ ...base, job_title: "Instructional Coach", school: "Lakeview County Schools" }, deps());
-    expect(out.body).toMatchObject({ level: 3, route: "gm" });
+    expect(out.body).toMatchObject({ level: 2, route: "bdr" });
   });
 
   it("TOSA with no signal still books a Discovery (Level 2), unlike a teacher", async () => {
@@ -51,9 +51,9 @@ describe("handleSubmission (mock mode)", () => {
     expect(out.body.level).toBe(2);
   });
 
-  it("teacher adopting soon stays Level 1: a teacher's adoption answer needs a second signal", async () => {
+  it("teacher adopting soon at a district with no PARR → Level 2: the upcoming review is their signal", async () => {
     const out = await handleSubmission({ ...base, job_title: "Teacher", school: "Riverside Unified", adoption_timeline: "SY26-27" }, deps());
-    expect(out.body.level).toBe(1);
+    expect(out.body.level).toBe(2);
   });
 
   it("internal @innovamat.com test is scored like a real lead, flagged in Slack, never written to Salesforce", async () => {

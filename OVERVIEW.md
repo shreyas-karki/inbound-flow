@@ -24,9 +24,9 @@ The whole thing takes a few seconds.
 
 | Level | Who it usually is | What the person sees | Who follows up |
 |---|---|---|---|
-| **Level 3** | District decision maker adopting in the next two school years, a coach or TOSA at a district that is actively buying, or a district leader there | **"Book directly with our growth team"**: they skip the intro call and book the 45-minute deep-dive | Growth manager |
-| **Level 2** (and anything unsure) | Principal, math coordinator, any coach or TOSA, district leader with later timing, teacher at a district that's actively buying | **"What does it look like?"**: the three-step path below, starting with booking the 10-minute call | BDR |
-| **Level 1** | Teacher with no adoption plans, outside our markets | **"Check your email!"**: digital samples sent by email | BDR sends a ready-made email draft posted in Slack |
+| **Level 3** | District decision makers and math directors/coordinators at a $30k+ PARR district, whatever their timing; a principal who decides for the whole school with a reason to change now | **"Book directly with our growth team"**: they skip the intro call and book the 45-minute deep-dive | Growth manager |
+| **Level 2** (and anything unsure) | Any coach or TOSA, principals and APs leading one building, decision makers at a district under $30k PARR, and teachers in an upcoming curriculum review at a district under $150k PARR | **"What does it look like?"**: the three-step path below, starting with booking the 10-minute call | BDR |
+| **Level 1** | Teachers with no review signal or at a $150k+ PARR district | **"Check your email!"**: digital samples sent by email | BDR sends a ready-made email draft posted in Slack |
 | **Existing customer or open deal** | Anyone at an account we already work with | "Your Innovamat contact will reach out" | The account or deal owner |
 
 The path every qualified lead follows:

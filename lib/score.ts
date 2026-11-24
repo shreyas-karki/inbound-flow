@@ -79,13 +79,11 @@ export const claudeScorer: Scorer = async (sub, sf, sb) => {
 export const mockScorer: Scorer = async (sub, _sf, sb) => {
   await new Promise((r) => setTimeout(r, 400));
   const group = roleGroup(sub.job_title);
-  // A teacher's adoption answer isn't reliable on its own, so only a hot district counts for end users.
-  const why = group === "end_user" ? isHotDistrict(sb) : adoptingSoon(sub) || isHotDistrict(sb);
-  const committee = /\b(committee|leading the review|lead the review)\b/i.test(sub.needs);
+  const why = adoptingSoon(sub) || isHotDistrict(sb);
+  // Teachers, coaches and building leaders are settled by applyLevelPolicy afterwards.
   const level: Level =
     group === "decision_maker" || group === "champion" ? (why ? 3 : 2)
-    : committee ? 3
-    : group === "coach" ? (isHotDistrict(sb) ? 3 : 2)
+    : group === "coach" ? 2
     : why ? 2 : 1;
   return { level, reason: `Mock: ${group.replace("_", " ")}${why ? " with a WHY NOW" : ", no WHY NOW yet"}.` };
 };

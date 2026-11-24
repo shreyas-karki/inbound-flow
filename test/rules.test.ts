@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyRules, capFirstTouch, capTeacherWithoutSignal, liftLargeDistrict } from "../lib/rules";
+import { applyLevelPolicy, applyRules, capFirstTouch } from "../lib/rules";
 import { SubmissionSchema, type Decision, type SfContext, type StarbridgeResult } from "../lib/types";
 
 const sub = (over: Record<string, unknown> = {}) =>
@@ -26,90 +26,59 @@ describe("applyRules", () => {
   });
 });
 
-describe("GM fast lane", () => {
-  const hot = (over: Partial<NonNullable<StarbridgeResult["account"]>> = {}): StarbridgeResult => ({
-    source: "starbridge",
-    account: { score: 84, fitBand: "Moderate", signalBand: "Hot", competitors: [], enrollment: 19986, ...over },
-  });
-  const none: SfContext = { matchedBy: "none" };
-
-  it("sends anyone who isn't a teacher at a hot, sizable district adopting soon to the GM", () => {
-    for (const job_title of ["Curriculum Director", "Math / STEM Coordinator", "District Administrator", "Director of Early Childhood Education", "Principal", "Instructional Coach", "Math TOSA"]) {
-      expect(applyRules(sub({ job_title, adoption_timeline: "SY27-28" }), none, hot()), job_title).toMatchObject({ level: 3, route: "gm", source: "rules" });
-    }
-  });
-
-  it("leaves teachers to Claude, even at a hot district", () => {
-    for (const job_title of ["Teacher", "Interventionist", "Other"]) {
-      expect(applyRules(sub({ job_title, adoption_timeline: "SY26-27" }), none, hot()), job_title).toBeNull();
-    }
-  });
-
-  it("needs all three: Hot, 5,000+ students, adopting SY26-27 or SY27-28", () => {
-    // Not a Curriculum Director: at a district this size they go to the GM anyway (see below).
-    const director = (adoption_timeline: string) => sub({ job_title: "Assistant Superintendent", adoption_timeline });
-    expect(applyRules(director("SY26-27"), none, hot({ signalBand: "Warm" }))).toBeNull();
-    expect(applyRules(director("SY26-27"), none, hot({ enrollment: 1200 }))).toBeNull();
-    expect(applyRules(director("SY28-29 or later"), none, hot())).toBeNull();
-    expect(applyRules(director("SY26-27"), none, { source: "timeout" })).toBeNull();
-  });
-});
-
-describe("Curriculum director at a $30k+ district", () => {
-  const director = (over: Record<string, unknown> = {}) => sub({ job_title: "Curriculum Director", adoption_timeline: "SY28-29 or later", ...over });
+describe("District decision makers and math directors/coordinators", () => {
   const sf = (parr?: number, over: Partial<NonNullable<SfContext["account"]>> = {}): SfContext => ({ matchedBy: "email", account: { id: "1", name: "X", parr, ...over } });
   const sb = (over: Partial<NonNullable<StarbridgeResult["account"]>> = {}): StarbridgeResult => ({
     source: "starbridge",
-    account: { score: 56, fitBand: "Strong", signalBand: "NoSignals", competitors: [], enrollment: 5484, ...over },
+    account: { score: 42, fitBand: "Weak", signalBand: "NoSignals", competitors: [], enrollment: 5484, ...over },
+  });
+  const gmRoles = ["Superintendent", "Assistant Superintendent", "Chief Academic Officer", "Curriculum Director", "Director of Teaching & Learning", "District Administrator", "Math / STEM Director", "Math Director", "Math / STEM Coordinator"];
+
+  it("always go to the growth manager at a $30k+ district, with no WHY NOW and a low Starbridge score", () => {
+    for (const job_title of gmRoles) {
+      const lead = sub({ job_title, adoption_timeline: "No plans yet" });
+      const d = applyRules(lead, sf(209720), sb())!;
+      expect(d, job_title).toMatchObject({ level: 3, route: "gm", source: "rules", reason: expect.stringContaining("$209,720 PARR") });
+      expect(capFirstTouch(d, lead, sf(209720), sb()), job_title).toBe(d);
+    }
   });
 
-  it("goes straight to the GM with no WHY NOW", () => {
-    // Kearny, NJ (Nov 2): Curriculum Director, $209,720 PARR, adopting SY28-29, no message. Claude made it a BDR Discovery.
-    expect(applyRules(director(), sf(209720), sb())).toMatchObject({
-      level: 3, route: "gm", source: "rules", reason: expect.stringContaining("$209,720 PARR"),
+  it("go to a BDR at a district under $30k PARR, even adopting soon", () => {
+    for (const job_title of gmRoles) {
+      expect(applyRules(sub({ job_title, adoption_timeline: "SY26-27" }), sf(8050), sb()), job_title).toMatchObject({
+        level: 2, route: "bdr", reason: expect.stringContaining("small district ($8,050 PARR)"),
+      });
+    }
+    expect(applyRules(sub({ job_title: "Curriculum Director" }), sf(29999), sb())).toMatchObject({ level: 2 });
+    expect(applyRules(sub({ job_title: "Curriculum Director" }), sf(30000), sb())).toMatchObject({ level: 3 });
+  });
+
+  it("use Starbridge students only without PARR, and no size data clears the floor", () => {
+    expect(applyRules(sub({ job_title: "Superintendent" }), sf(), sb({ enrollment: 649 }))).toMatchObject({ level: 2, reason: expect.stringContaining("649 students") });
+    expect(applyRules(sub({ job_title: "Superintendent" }), sf(), sb({ enrollment: 650 }))).toMatchObject({ level: 3 });
+    expect(applyRules(sub({ job_title: "Superintendent" }), { matchedBy: "none" }, { source: "timeout" })).toMatchObject({
+      level: 3, route: "gm", reason: "Superintendent: always a First Touch with the growth manager.",
     });
   });
 
-  it("starts at $30k PARR, and uses Starbridge students only when Salesforce has no PARR", () => {
-    expect(applyRules(director(), sf(30000), sb())).toMatchObject({ level: 3, route: "gm" });
-    expect(applyRules(director(), sf(29999), sb())).toBeNull();
-    expect(applyRules(director(), sf(29999), sb({ enrollment: 20000 }))).toBeNull();
-    expect(applyRules(director(), sf(), sb({ enrollment: 650 }))).toMatchObject({ level: 3, route: "gm", reason: expect.stringContaining("650 students") });
-    expect(applyRules(director(), sf(), sb({ enrollment: 649 }))).toBeNull();
-    expect(applyRules(director(), { matchedBy: "none" }, { source: "timeout" })).toBeNull();
-  });
-
-  it("keeps the First Touch whatever the Starbridge score", () => {
-    const decision = applyRules(director(), sf(209720), sb({ score: 42 }))!;
-    expect(decision).toMatchObject({ level: 3, route: "gm" });
-    expect(capFirstTouch(decision, director(), sf(209720), sb({ score: 42 }))).toBe(decision);
-  });
-
-  it("goes straight to the GM at any district size when adopting SY26-27 or SY27-28", () => {
-    const soon = director({ adoption_timeline: "SY26-27" });
-    // $8,050 PARR and a score of 42: under the floor on both counts, but adopting soon.
-    const decision = applyRules(soon, sf(8050), sb({ score: 42 }))!;
-    expect(decision).toMatchObject({ level: 3, route: "gm", source: "rules", reason: expect.stringContaining("adopting SY26-27 at a district with $8,050 PARR") });
-    expect(capFirstTouch(decision, soon, sf(8050), sb({ score: 42 }))).toBe(decision);
-    expect(applyRules(director({ adoption_timeline: "SY27-28" }), sf(), sb({ enrollment: 300 }))).toMatchObject({ level: 3, route: "gm" });
-    expect(applyRules(director({ adoption_timeline: "SY27-28" }), { matchedBy: "none" }, { source: "timeout" })).toMatchObject({
-      level: 3, route: "gm", reason: "Curriculum Director adopting SY27-28: always a First Touch with the growth manager.",
-    });
-  });
-
-  it("leaves a small district to Claude and the floor when the director isn't adopting soon, or isn't a director", () => {
-    for (const adoption_timeline of ["Already adopted", "SY28-29 or later", "No plans yet", "I'm not sure", ""]) {
-      expect(applyRules(director({ adoption_timeline }), sf(8050), sb()), adoption_timeline).toBeNull();
+  it("leave principals, coaches, teachers and other champions to Claude; owners and non-served countries win", () => {
+    for (const job_title of ["Principal", "Instructional Coach", "Teacher", "Director of Early Childhood Education", "Other"]) {
+      expect(applyRules(sub({ job_title }), sf(209720), sb()), job_title).toBeNull();
     }
-    expect(applyRules(director({ job_title: "Superintendent", adoption_timeline: "SY26-27" }), sf(8050), sb())).toBeNull();
+    expect(applyRules(sub({ job_title: "Curriculum Director" }), sf(209720, { label: "CUSTOMER", ownerName: "Kim" }), sb())).toMatchObject({ route: "owner", ownerName: "Kim" });
+    expect(applyRules(sub({ job_title: "Curriculum Director", country: "Other" }), sf(209720), sb())?.level).toBe(0);
   });
+});
 
-  it("leaves other decision makers to Claude, and existing owners and non-served countries win", () => {
-    for (const job_title of ["Superintendent", "Chief Academic Officer", "Principal", "Math / STEM Director"]) {
-      expect(applyRules(director({ job_title }), sf(209720), sb()), job_title).toBeNull();
+describe("GM fast lane", () => {
+  const hot: StarbridgeResult = { source: "starbridge", account: { score: 84, fitBand: "Moderate", signalBand: "Hot", competitors: [], enrollment: 19986 } };
+  const none: SfContext = { matchedBy: "none" };
+
+  it("only takes champions outside the growth-manager roles", () => {
+    expect(applyRules(sub({ job_title: "Director of Early Childhood Education", adoption_timeline: "SY27-28" }), none, hot)).toMatchObject({ level: 3, route: "gm" });
+    for (const job_title of ["Principal", "Vice Principal", "Instructional Coach", "Math TOSA", "Teacher"]) {
+      expect(applyRules(sub({ job_title, adoption_timeline: "SY27-28" }), none, hot), job_title).toBeNull();
     }
-    expect(applyRules(director(), sf(209720, { label: "CUSTOMER", ownerName: "Kim" }), sb())).toMatchObject({ route: "owner", ownerName: "Kim" });
-    expect(applyRules(director({ country: "Other" }), sf(209720), sb())?.level).toBe(0);
   });
 });
 
@@ -149,43 +118,51 @@ describe("First Touch floor", () => {
   });
 });
 
-describe("Teacher with no signal", () => {
-  // Jessica Jones, Oct 26: teacher, SY26-27, no message, no Starbridge match. Claude returned Level 2 while its reason said Level 1.
-  const level2: Decision = { level: 2, route: "bdr", meeting: "discovery", reason: "Teacher reporting adoption in SY26-27 at a non-hot account.", source: "claude" };
-  const none: StarbridgeResult = { source: "starbridge" }; // no Starbridge match
-  const hot: StarbridgeResult = { source: "starbridge", account: { score: 80, fitBand: "Strong", signalBand: "Hot", fitSummary: "", signalSummary: "" } as NonNullable<StarbridgeResult["account"]> };
-
-  it("keeps a teacher adopting soon with no message and no hot district at Level 1", () => {
-    expect(capTeacherWithoutSignal(level2, sub({ adoption_timeline: "SY26-27" }), none)).toMatchObject({
-      level: 1, route: "email", meeting: undefined, reason: expect.stringContaining("Kept at Level 1"),
-    });
-  });
-
-  it("trusts Claude when there's a message or a hot district, and leaves other roles and the fallback alone", () => {
-    expect(capTeacherWithoutSignal(level2, sub({ needs: "We're piloting new math programs" }), none)).toBe(level2);
-    expect(capTeacherWithoutSignal(level2, sub(), hot)).toBe(level2);
-    expect(capTeacherWithoutSignal(level2, sub({ job_title: "Principal" }), none)).toBe(level2);
-    const fallback: Decision = { ...level2, source: "fallback" };
-    expect(capTeacherWithoutSignal(fallback, sub(), none)).toBe(fallback);
-  });
-});
-
-describe("Very large district", () => {
+describe("Level policy after scoring", () => {
   const sf = (parr?: number): SfContext => ({ matchedBy: "email", account: { id: "1", name: "X", parr } });
-  const level1: Decision = { level: 1, route: "email", reason: "Teacher with no evaluation signal.", source: "claude" };
-
-  it("lifts a Level 1 lead at a $500k+ district to a BDR Discovery", () => {
-    // Toledo City, OH: $969,940 PARR.
-    expect(liftLargeDistrict(level1, sf(969939.6))).toMatchObject({ level: 2, route: "bdr", meeting: "discovery", reason: expect.stringContaining("very large district ($969,940 PARR)") });
-    expect(liftLargeDistrict(level1, sf(500000))).toMatchObject({ level: 2 });
+  const sb = (signalBand = "NoSignals"): StarbridgeResult => ({ source: "starbridge", account: { score: 80, fitBand: "Strong", signalBand, competitors: [] } });
+  const at = (level: 0 | 1 | 2 | 3, source: Decision["source"] = "claude"): Decision => ({
+    level, route: level === 3 ? "gm" : level === 2 ? "bdr" : "email", meeting: level === 3 ? "first_touch" : level === 2 ? "discovery" : undefined, reason: "Scored.", source,
   });
 
-  it("leaves smaller districts, missing PARR, non-buyers and higher levels alone", () => {
-    expect(liftLargeDistrict(level1, sf(499999))).toBe(level1);
-    expect(liftLargeDistrict(level1, sf())).toBe(level1);
-    const level0: Decision = { level: 0, route: "email", reason: "Parent.", source: "rules" };
-    expect(liftLargeDistrict(level0, sf(2000000))).toBe(level0);
-    const firstTouch: Decision = { level: 3, route: "gm", meeting: "first_touch", reason: "Superintendent.", source: "claude" };
-    expect(liftLargeDistrict(firstTouch, sf(2000000))).toBe(firstTouch);
+  it("gives a teacher a Discovery only with a review signal at a district under $150k PARR", () => {
+    const soon = sub({ adoption_timeline: "SY26-27" });
+    expect(applyLevelPolicy(at(1), soon, sf(80000), sb())).toMatchObject({ level: 2, route: "bdr", meeting: "discovery", reason: expect.stringContaining("adopting SY26-27") });
+    expect(applyLevelPolicy(at(1), sub({ needs: "I'm on our math curriculum committee" }), sf(80000), sb())).toMatchObject({ level: 2, reason: expect.stringContaining("message") });
+    expect(applyLevelPolicy(at(1), sub(), sf(80000), sb("Hot"))).toMatchObject({ level: 2, reason: expect.stringContaining("hot district") });
+    expect(applyLevelPolicy(at(1), soon, sf(), sb())).toMatchObject({ level: 2 }); // no PARR passes
+    expect(applyLevelPolicy(at(2), soon, sf(149999), sb()).level).toBe(2);
+  });
+
+  it("keeps teachers at big districts, or with no signal, at Level 1, whatever Claude or the fallback said", () => {
+    const soon = sub({ adoption_timeline: "SY27-28" });
+    expect(applyLevelPolicy(at(2), soon, sf(150000), sb())).toMatchObject({ level: 1, route: "email", meeting: undefined, reason: expect.stringContaining("$150,000 PARR") });
+    expect(applyLevelPolicy(at(3), soon, sf(969940), sb("Hot"))).toMatchObject({ level: 1 });
+    // A Warm district or a high score is no longer enough on its own.
+    expect(applyLevelPolicy(at(2), sub(), sf(50000), sb("Warm"))).toMatchObject({ level: 1, reason: expect.stringContaining("no curriculum-review signal") });
+    expect(applyLevelPolicy(at(2, "fallback"), sub(), sf(50000), sb())).toMatchObject({ level: 1 });
+  });
+
+  it("always gives coaches and TOSAs a Discovery, never a First Touch", () => {
+    for (const job_title of ["Instructional Coach", "Math TOSA"]) {
+      expect(applyLevelPolicy(at(3), sub({ job_title }), sf(900000), sb("Hot")), job_title).toMatchObject({ level: 2, route: "bdr" });
+      expect(applyLevelPolicy(at(1), sub({ job_title }), sf(), sb()), job_title).toMatchObject({ level: 2, route: "bdr" });
+    }
+  });
+
+  it("gives building leaders at least a Discovery; only a principal can keep a First Touch", () => {
+    expect(applyLevelPolicy(at(1), sub({ job_title: "Principal" }), sf(), sb())).toMatchObject({ level: 2 });
+    const ft = at(3);
+    expect(applyLevelPolicy(ft, sub({ job_title: "Principal" }), sf(), sb())).toBe(ft);
+    expect(applyLevelPolicy(ft, sub({ job_title: "Vice Principal" }), sf(), sb())).toMatchObject({ level: 2 });
+  });
+
+  it("leaves Level 0, existing owners and other roles alone", () => {
+    const zero = at(0);
+    expect(applyLevelPolicy(zero, sub({ adoption_timeline: "SY26-27" }), sf(1000), sb("Hot"))).toBe(zero);
+    const owner: Decision = { level: 3, route: "owner", reason: "Existing customer.", source: "rules" };
+    expect(applyLevelPolicy(owner, sub(), sf(), sb())).toBe(owner);
+    const champ = at(3);
+    expect(applyLevelPolicy(champ, sub({ job_title: "Director of Early Childhood Education" }), sf(), sb())).toBe(champ);
   });
 });
