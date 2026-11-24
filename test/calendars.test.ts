@@ -137,3 +137,11 @@ describe("expandShortLink", () => {
     expect(await expandShortLink("https://calendar.google.com/calendar/appointments/schedules/X", fail)).toBe("https://calendar.google.com/calendar/appointments/schedules/X");
   });
 });
+
+describe("named host (enterprise override)", () => {
+  it("books on that person's calendar_links row, not the state's team", async () => {
+    const tables = { bdrs: [], firstTouch: [], discovery: [], people: [{ name: "Prynce Karki", userId: "005PRYNCE", bookingUrl: "https://calendar.google.com/calendar/appointments/schedules/AcZPrynce" }] };
+    const host = resolveHost({ level: 3, route: "gm", reason: "x", source: "rules", hostName: "Prynce Karki" }, "Ohio", { matchedBy: "none" }, tables);
+    expect(host).toMatchObject({ name: "Prynce Karki", userId: "005PRYNCE", source: "enterprise_override", bookingUrl: expect.stringContaining("AcZPrynce") });
+  });
+});

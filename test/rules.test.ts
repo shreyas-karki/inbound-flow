@@ -170,3 +170,27 @@ describe("Level policy after scoring", () => {
     expect(applyLevelPolicy(champ, sub({ job_title: "Director of Early Childhood Education" }), sf(), sb())).toBe(champ);
   });
 });
+
+describe("Enterprise override", () => {
+  const sf = (parr?: number): SfContext => ({ matchedBy: "email", account: { id: "1", name: "X", parr } });
+  const sb = (enrollment?: number): StarbridgeResult => ({ source: "starbridge", account: { score: 60, fitBand: "Strong", signalBand: "NoSignals", competitors: [], enrollment } });
+  const l1: Decision = { level: 1, route: "email", reason: "Scored.", source: "claude" };
+
+  it("sends a teacher or coach at an 8,000+ student district adopting soon to Prynce, whatever the PARR", () => {
+    for (const [job_title, adoption_timeline] of [["Teacher", "SY26-27"], ["Instructional Coach", "SY27-28"], ["Math TOSA", "SY28-29 or later"]]) {
+      const d = applyLevelPolicy(l1, sub({ job_title, adoption_timeline }), sf(900000), sb(8000));
+      expect(d, job_title).toMatchObject({ level: 3, route: "gm", meeting: "first_touch", hostName: "Prynce Karki", reason: expect.stringContaining("Enterprise override: large district (8,000 students)") });
+      expect(capFirstTouch(d, sub({ job_title }), sf(900000), { source: "starbridge", account: { score: 10, fitBand: "Weak", signalBand: "NoSignals", competitors: [], enrollment: 8000 } }), job_title).toBe(d);
+    }
+  });
+
+  it("needs a large district and an adoption date, and only covers teachers and coaches", () => {
+    expect(applyLevelPolicy(l1, sub({ adoption_timeline: "SY26-27" }), sf(), sb(7999)).hostName).toBeUndefined();
+    expect(applyLevelPolicy(l1, sub({ adoption_timeline: "SY26-27" }), sf(), sb()).hostName).toBeUndefined();
+    expect(applyLevelPolicy(l1, sub({ adoption_timeline: "No plans yet" }), sf(), sb(20000)).hostName).toBeUndefined();
+    const ft: Decision = { level: 3, route: "gm", reason: "Scored.", source: "claude" };
+    expect(applyLevelPolicy(ft, sub({ job_title: "Principal", adoption_timeline: "SY26-27" }), sf(), sb(20000))).toBe(ft);
+    const zero: Decision = { level: 0, route: "email", reason: "Student.", source: "claude" };
+    expect(applyLevelPolicy(zero, sub({ adoption_timeline: "SY26-27" }), sf(), sb(20000))).toBe(zero);
+  });
+});

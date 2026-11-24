@@ -88,6 +88,8 @@ export interface Decision {
   reason: string;
   source: "rules" | "claude" | "fallback";
   ownerName?: string;
+  // Book with this named person instead of the state's team (the enterprise override in rulesConfig).
+  hostName?: string;
 }
 
 export interface WriteResult {
@@ -104,7 +106,7 @@ export interface Host {
   bookingUrl?: string; // raw sheet link; nextStep() makes it embeddable
   alsoAdd: string[]; // First Touch: people to add to the call
   standInFor?: string; // First Touch: the State GM this host books for while the GM has no calendar
-  source: "first_touch_sheet" | "bdr_sheet" | "salesforce" | "env";
+  source: "first_touch_sheet" | "bdr_sheet" | "salesforce" | "env" | "enterprise_override";
 }
 
 export interface NextStep {

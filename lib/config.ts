@@ -156,6 +156,17 @@ export const rulesConfig = {
     signalBands: ["Hot"],
     reviewWords: /\b(curricul\w*|adopt\w*|review\w*|committee|pilot\w*|evaluat\w*|RFP)\b/i,
   },
+  // Enterprise override (Prynce, Nov 24 2026): Prynce opens enterprise districts, so a teacher or coach at a large
+  // district adopting soon books a First Touch on his calendar instead of a BDR call or the Level 1 email. "Large" is
+  // Starbridge enrollment of minEnrollment+ (Salesforce has no "enterprise" field as of Nov 2026). His calendar link comes from the calendar_links tab by name; bookingUrl
+  // and userId here are fallbacks when the sheet has none.
+  enterpriseOverride: {
+    hostName: "Prynce Karki",
+    roleGroups: ["end_user", "coach"],
+    minEnrollment: 8000,
+    userId: "005QD00000lZnE5YAK",
+    bookingUrl: "https://calendar.app.google/kawfRpvyCm6xNQWm7",
+  },
   // GM fast lane: a champion outside gmRoles (Early Childhood, MTSS, Title I…) goes straight to a First Touch when the
   // district is hot, sizable and adopting soon. Everything else is scored by Claude with prompts/rubric.md.
   firstTouch: {

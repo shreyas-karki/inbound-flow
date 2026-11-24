@@ -100,7 +100,7 @@ export function isBuildingLeader(role: string): boolean {
  * gmRoles already had the size floor applied by the rules, and skip the Starbridge score check.
  */
 export function capFirstTouch(decision: Decision, sub: Submission, sf: SfContext, sb: StarbridgeResult): Decision {
-  if (decision.route !== "gm" || isGmRole(sub.job_title)) return decision;
+  if (decision.route !== "gm" || decision.hostName || isGmRole(sub.job_title)) return decision;
   const size = districtSize(sf, sb);
   const { minScore } = rulesConfig.firstTouchFloor;
   const why = [
@@ -109,6 +109,20 @@ export function capFirstTouch(decision: Decision, sub: Submission, sf: SfContext
   ].filter(Boolean).join(", ");
   if (!why) return decision;
   return { ...decision, level: 2, route: "bdr", meeting: "discovery", reason: `${decision.reason} Capped at Discovery: ${why}.` };
+}
+
+/**
+ * A teacher or coach at a large district adopting soon goes straight to the enterprise owner's calendar
+ * (rulesConfig.enterpriseOverride), whatever the PARR. Undefined when it doesn't apply.
+ */
+export function enterpriseOverride(sub: Submission, sb: StarbridgeResult): { hostName: string; note: string } | undefined {
+  const { hostName, roleGroups, minEnrollment } = rulesConfig.enterpriseOverride;
+  const enrollment = sb.account?.enrollment;
+  if (!roleGroups.includes(roleGroup(sub.job_title)) || !adoptingSoon(sub) || enrollment === undefined || enrollment < minEnrollment) return undefined;
+  return {
+    hostName,
+    note: `Enterprise override: large district (${enrollment.toLocaleString("en-US")} students) adopting ${sub.adoption_timeline}, booked with ${hostName}.`,
+  };
 }
 
 function setLevel(decision: Decision, level: Level, note: string): Decision {
@@ -138,6 +152,9 @@ export function applyLevelPolicy(decision: Decision, sub: Submission, sf: SfCont
   if (decision.route === "owner" || decision.level === 0) return decision;
   const role = sub.job_title;
   const group = roleGroup(role);
+
+  const enterprise = enterpriseOverride(sub, sb);
+  if (enterprise) return { ...setLevel(decision, 3, enterprise.note), hostName: enterprise.hostName };
 
   if (group === "end_user") {
     const parr = sf.account?.parr;

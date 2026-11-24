@@ -5,7 +5,7 @@
 // - calendar_links: SF Long ID | SF Name | Calendar Link                 → each person's Google appointment page
 // - Mapping:        US State | Owner | User Long ID | … | Account Team   → Level 2 only for states with no Discovery
 // Make scenario 172177 also reads Mapping (columns A and C), so only ever add columns or tabs there.
-import { config } from "./config";
+import { config, rulesConfig } from "./config";
 import { stateName } from "./states";
 import type { Decision, Host, SfContext, StarbridgeResult, Submission } from "./types";
 
@@ -45,6 +45,19 @@ export function resolveHost(decision: Decision, state: string | undefined, sf: S
       userId: owner?.id ?? opp?.ownerId ?? sf.account?.ownerId,
       alsoAdd: [],
       source: "salesforce",
+    };
+  }
+
+  // A named host (the enterprise override): their calendar_links row by name, else the config fallback.
+  if (decision.hostName) {
+    const name = decision.hostName;
+    const o = sameName(rulesConfig.enterpriseOverride.hostName, name) ? rulesConfig.enterpriseOverride : { userId: "", bookingUrl: "" };
+    return {
+      name,
+      userId: tables.people.find((p) => sameName(p.name, name) && p.userId)?.userId ?? (o.userId || undefined),
+      bookingUrl: tables.people.find((p) => sameName(p.name, name) && p.bookingUrl)?.bookingUrl ?? (o.bookingUrl || undefined),
+      alsoAdd: [],
+      source: "enterprise_override",
     };
   }
 
