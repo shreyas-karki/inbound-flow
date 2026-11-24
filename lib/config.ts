@@ -149,7 +149,7 @@ export const rulesConfig = {
   // them a First Touch; the size floor applies.
   buildingLeaderRoles: ["Principal", "Vice Principal", "Assistant Principal"],
   // A teacher gets a BDR Discovery only when both hold; otherwise Level 1. At bigger districts teachers have little say.
-  // A signal is: their message mentions the review, they answer SY26-27 / SY27-28 to the adoption question, or
+  // A signal is: their message mentions the review, they answer SY26-27, SY27-28 or SY28-29 to the adoption question, or
   // Starbridge has the district in one of signalBands. Missing PARR passes. Teachers never get a First Touch.
   teacherDiscovery: {
     maxParr: 150000, // Salesforce Total PARR, USD (district)

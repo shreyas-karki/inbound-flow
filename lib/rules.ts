@@ -189,8 +189,9 @@ export function isHotDistrict(sb: StarbridgeResult): boolean {
   return Boolean(a && (["Hot", "Warm"].includes(a.signalBand) || a.score >= 70));
 }
 
+/** A planned adoption that qualifies: SY26-27, SY27-28, or SY28-29 (counted since Nov 24 2026). */
 export function adoptingSoon(sub: Submission): boolean {
-  return /SY26-27|SY27-28/.test(sub.adoption_timeline);
+  return /SY26-27|SY27-28|SY28-29/.test(sub.adoption_timeline);
 }
 
 /** NYC public schools buy at building level, so the principal / AP is who a teacher should loop in. */

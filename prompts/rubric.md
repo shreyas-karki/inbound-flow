@@ -27,8 +27,7 @@ The first thing we need from any lead is the WHY NOW: why this district would ch
 - It shows a student, parent, vendor, sponsorship or conference pitch, job seeker, high-school-only teacher, an internal test, or nonsense: Level 0, whatever role was picked.
 
 **Curriculum adoption** (`curriculum_adoption`, "When is your district planning to adopt a new math curriculum?"):
-- `SY26-27` or `SY27-28` ("adopting soon") is a WHY NOW.
-- `SY28-29 or later`: early research, not a WHY NOW.
+- `SY26-27`, `SY27-28` or `SY28-29 or later` ("adopting soon") is a WHY NOW.
 - `I'm not sure`: unknown. Don't penalize; rely on role and Starbridge.
 - `No plans yet` or `Already adopted`: no WHY NOW.
 

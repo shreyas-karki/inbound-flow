@@ -132,6 +132,10 @@ describe("Level policy after scoring", () => {
     expect(applyLevelPolicy(at(1), sub(), sf(80000), sb("Hot"))).toMatchObject({ level: 2, reason: expect.stringContaining("hot district") });
     expect(applyLevelPolicy(at(1), soon, sf(), sb())).toMatchObject({ level: 2 }); // no PARR passes
     expect(applyLevelPolicy(at(2), soon, sf(149999), sb()).level).toBe(2);
+    expect(applyLevelPolicy(at(1), sub({ adoption_timeline: "SY28-29 or later" }), sf(80000), sb())).toMatchObject({ level: 2, reason: expect.stringContaining("SY28-29") });
+    for (const adoption_timeline of ["No plans yet", "Already adopted", "I'm not sure"]) {
+      expect(applyLevelPolicy(at(2), sub({ adoption_timeline }), sf(80000), sb()).level, adoption_timeline).toBe(1);
+    }
   });
 
   it("keeps teachers at big districts, or with no signal, at Level 1, whatever Claude or the fallback said", () => {
