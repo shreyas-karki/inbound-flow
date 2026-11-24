@@ -176,10 +176,10 @@ describe("Enterprise override", () => {
   const sb = (enrollment?: number): StarbridgeResult => ({ source: "starbridge", account: { score: 60, fitBand: "Strong", signalBand: "NoSignals", competitors: [], enrollment } });
   const l1: Decision = { level: 1, route: "email", reason: "Scored.", source: "claude" };
 
-  it("sends a teacher or coach at an 8,000+ student district adopting soon to Prynce, whatever the PARR", () => {
+  it("books a teacher or coach at an 8,000+ student district adopting soon on Prynce's calendar, whatever the PARR", () => {
     for (const [job_title, adoption_timeline] of [["Teacher", "SY26-27"], ["Instructional Coach", "SY27-28"], ["Math TOSA", "SY28-29 or later"]]) {
       const d = applyLevelPolicy(l1, sub({ job_title, adoption_timeline }), sf(900000), sb(8000));
-      expect(d, job_title).toMatchObject({ level: 3, route: "gm", meeting: "first_touch", hostName: "Prynce Karki", reason: expect.stringContaining("Enterprise override: large district (8,000 students)") });
+      expect(d, job_title).toMatchObject({ level: 2, route: "bdr", meeting: "discovery", hostName: "Prynce Karki", reason: expect.stringContaining("Enterprise override: large district (8,000 students)") });
       expect(capFirstTouch(d, sub({ job_title }), sf(900000), { source: "starbridge", account: { score: 10, fitBand: "Weak", signalBand: "NoSignals", competitors: [], enrollment: 8000 } }), job_title).toBe(d);
     }
   });

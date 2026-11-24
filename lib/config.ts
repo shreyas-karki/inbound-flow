@@ -157,7 +157,8 @@ export const rulesConfig = {
     reviewWords: /\b(curricul\w*|adopt\w*|review\w*|committee|pilot\w*|evaluat\w*|RFP)\b/i,
   },
   // Enterprise override (Prynce, Nov 24 2026): Prynce opens enterprise districts, so a teacher or coach at a large
-  // district adopting soon books a First Touch on his calendar instead of a BDR call or the Level 1 email. "Large" is
+  // district adopting soon books their Level 2 Discovery on his calendar instead of a BDR's (or instead of the Level 1
+  // email). It is not a First Touch: those are for decision makers. "Large" is
   // Starbridge enrollment of minEnrollment+ (Salesforce has no "enterprise" field as of Nov 2026). His calendar link comes from the calendar_links tab by name; bookingUrl
   // and userId here are fallbacks when the sheet has none.
   enterpriseOverride: {

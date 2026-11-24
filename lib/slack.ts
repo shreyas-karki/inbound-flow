@@ -24,11 +24,12 @@ export interface SlackExtras {
 export function buildSlackHeader(sub: Submission, sb: StarbridgeResult, decision: Decision, next: NextStep, host?: Host, team?: StateTeam): string {
   const hostName = host?.name ?? (decision.route === "gm" ? config.routing.gmName : config.routing.bdrName);
   const label = decision.route === "owner" ? "Existing account" : LEVEL_NAME[decision.level];
+  const enterprise = host?.source === "enterprise_override" ? " (enterprise override, not the state's BDR)" : "";
   const standIn = host?.standInFor ? ` (${host.standInFor}, the state GM, has no calendar yet)` : "";
   const routeLine = {
     owner: `:handshake: Routed to *${host?.name ?? decision.ownerName ?? "account owner"}* (existing account/deal). Please follow up.`,
     gm: next.type === "calendar" ? `:calendar: *First Touch*: shown *${next.host}*'s calendar${standIn}. Watch for the booking.` : `:warning: No calendar link for *${hostName}*. Reach out to book a First Touch.`,
-    bdr: next.type === "calendar" ? `:calendar: *Discovery*: shown *${next.host}*'s calendar. Watch for the booking.` : `:warning: No calendar link for *${hostName}*. Reach out to book a Discovery call.`,
+    bdr: next.type === "calendar" ? `:calendar: *Discovery*: shown *${next.host}*'s calendar${enterprise}. Watch for the booking.` : `:warning: No calendar link for *${hostName}*. Reach out to book a Discovery call.`,
     email: `:email: No meeting yet: they get an email asking who picks math curriculum.`,
   }[decision.route];
   return [

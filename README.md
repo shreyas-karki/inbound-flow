@@ -121,7 +121,7 @@ Levels follow the US deal-stage framework (Discovery vs First Touch is defined b
 |---|---|---|---|
 | 3 | District decision makers (superintendent, asst. superintendent, CAO, curriculum director, director of T&L, district administrator) and math / STEM directors and coordinators, WHY NOW or not, at a $30k+ PARR district (or no size data); a principal who decides for the whole school (NYC, charter, private, single-school district) or another champion (MTSS, Title I, early childhood…) with a WHY NOW | First Touch with a growth manager | Direct walkthrough + sample drop-off |
 | 2 | Those decision makers and math directors at a district under $30k PARR; coaches and TOSAs (always); principals and APs leading one building; champions without a WHY NOW; teachers only with a curriculum-review signal (adopting SY26-27, SY27-28 or SY28-29, a message about the review, or a Hot district) at a district under $150k PARR | Discovery with a BDR | Short call, who else is involved |
-| 3 · enterprise | Override: a teacher or coach at a district with 8,000+ students (Starbridge) adopting SY26-27, SY27-28 or SY28-29, whatever the PARR | First Touch on Prynce Karki's calendar | Direct walkthrough |
+| 2 · enterprise | Override: a teacher or coach at a district with 8,000+ students (Starbridge) adopting SY26-27, SY27-28 or SY28-29, whatever the PARR | Discovery on Prynce Karki's calendar instead of the BDR's (not a First Touch) | Direct walkthrough |
 | 1 | Teachers and interventionists with no review signal, or at a $150k+ PARR district | None | "We'll be in touch; loop in your principal/AP (NYC) or district curriculum lead" |
 
 Role groups live in `lib/config.ts`; the rubric is `prompts/rubric.md`; the reply voice (Luis's state templates) is `prompts/sdr-reply.md`.

@@ -121,7 +121,7 @@ export function enterpriseOverride(sub: Submission, sb: StarbridgeResult): { hos
   if (!roleGroups.includes(roleGroup(sub.job_title)) || !adoptingSoon(sub) || enrollment === undefined || enrollment < minEnrollment) return undefined;
   return {
     hostName,
-    note: `Enterprise override: large district (${enrollment.toLocaleString("en-US")} students) adopting ${sub.adoption_timeline}, booked with ${hostName}.`,
+    note: `Enterprise override: large district (${enrollment.toLocaleString("en-US")} students) adopting ${sub.adoption_timeline}: Discovery with ${hostName}.`,
   };
 }
 
@@ -154,7 +154,7 @@ export function applyLevelPolicy(decision: Decision, sub: Submission, sf: SfCont
   const group = roleGroup(role);
 
   const enterprise = enterpriseOverride(sub, sb);
-  if (enterprise) return { ...setLevel(decision, 3, enterprise.note), hostName: enterprise.hostName };
+  if (enterprise) return { ...setLevel(decision, 2, enterprise.note), hostName: enterprise.hostName };
 
   if (group === "end_user") {
     const parr = sf.account?.parr;
